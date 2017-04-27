@@ -7,7 +7,7 @@
 /**
  * Prints usage - should be defined in program main file.
  */
-extern void usage() const;
+extern void usage();
 
 /**
  * Available exit codes.
@@ -23,7 +23,7 @@ enum class Status {
  * @param error_message error to print.
  * @param error_code program exit code.
  */
-void fatal(const std::string &error_message, Status error_code) const {
+void fatal(const std::string &error_message, Status error_code) {
     std::cerr << error_message << std::endl;
     usage();
     exit((int)error_code);
