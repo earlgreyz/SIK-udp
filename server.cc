@@ -1,5 +1,6 @@
 #include <iostream>
 #include "error.h"
+#include "parse.h"
 
 
 // Name of an executable program was run as.
@@ -12,7 +13,7 @@ std::string filename;
 /**
  * Prints usage.
  */
-void usage() const {
+void usage() {
     std::cout << "Usage: " << executable << " port filename\n\n"
         "Parameters:\n"
         " - port        Port number, on which server listens for data\n"
@@ -25,18 +26,19 @@ void usage() const {
  * @param argv argument values.
  */
 void parse_arguments(const int argc, char * const argv[]) {
-    executable = argv[0];
+    // Save executable for `usage` function.
+    executable = std::move(argv[0]);
+
     if (argc != 3) {
         fatal("Invalid arguments count", Status::ERROR_ARGS);
     }
 
     try {
-        port = std::stoi(argv[1]);
-    } catch (const std::exception &) {
-        fatal("Port must be an integer", Status::ERROR_ARGS);
+        port = parse_port(argv[1]);
+        filename = std::move(argv[2]);
+    } catch (const std::exception & e) {
+        fatal(e.what(), Status::ERROR_ARGS);
     }
-
-    filename = argv[2];
 }
 
 int main(int argc, char * argv[]) {
