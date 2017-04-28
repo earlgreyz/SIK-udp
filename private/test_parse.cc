@@ -27,7 +27,23 @@ TEST_CASE("parse_character returns proper data", "[parse_character]") {
 }
 
 TEST_CASE("parse_character throws errors on invalid input", "[parse_character]") {
-    REQUIRE_THROWS_AS(parse_character(""), ParseException);
-    REQUIRE_THROWS_AS(parse_character("ą"), ParseException);
+    CHECK_THROWS_AS(parse_character(""), ParseException);
+    CHECK_THROWS_AS(parse_character("ą"), ParseException);
     REQUIRE_THROWS_AS(parse_character("ab"), ParseException);
+}
+
+TEST_CASE("parse_timestamp returns proper data", "[parse_timestamp]") {
+    CHECK(parse_timestamp("0") == 0);
+    CHECK(parse_timestamp("42") == 42);
+    REQUIRE(parse_timestamp("18446744073709551615") == 18446744073709551615u);
+}
+
+TEST_CASE("parse_timestamp throws errors on invalid input", "[parse_timestamp]") {
+    CHECK_THROWS_AS(parse_timestamp("-1"), ParseException);
+    REQUIRE_THROWS_AS(parse_timestamp("18446744073709551616"), ParseException);
+    REQUIRE_THROWS_AS(parse_timestamp("100000000000000000000"), ParseException);
+
+    CHECK_THROWS_AS(parse_timestamp("abc"), ParseException);
+    CHECK_THROWS_AS(parse_timestamp("42abc"), ParseException);
+    REQUIRE_THROWS_AS(parse_timestamp("42 42"), ParseException);
 }

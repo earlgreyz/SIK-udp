@@ -73,7 +73,10 @@ char parse_character(const std::string &input) {
  */
 timestamp_t parse_timestamp(const std::string &input) {
     try {
-        timestamp_t timestamp = boost::lexical_cast<uint64_t>(input);
+        timestamp_t timestamp = boost::lexical_cast<timestamp_t>(input);
+        if (boost::lexical_cast<std::string>(timestamp) != input) {
+            throw ParseException("Timestamp must be a 64-bit unsigned number");
+        }
         return timestamp;
     } catch (const boost::bad_lexical_cast &) {
         throw ParseException("Timestamp must be a 64-bit unsigned number");
