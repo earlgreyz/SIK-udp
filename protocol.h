@@ -1,11 +1,11 @@
 #ifndef SIK_UDP_PROTOCOL_H
 #define SIK_UDP_PROTOCOL_H
 
-#include <ctime>
+#include <cstdint>
 #include <string>
 
 
-using timestamp_t = time_t;
+using timestamp_t = uint64_t;
 
 bool is_proper_timestamp(timestamp_t timestamp) {
     throw new std::exception();

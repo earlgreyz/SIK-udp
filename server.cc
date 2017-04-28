@@ -36,7 +36,7 @@ void parse_arguments(const int argc, char * const argv[]) {
     try {
         port = parse_port(argv[1]);
         filename = std::move(argv[2]);
-    } catch (const std::exception & e) {
+    } catch (const ParseException &e) {
         fatal(e.what(), Status::ERROR_ARGS);
     }
 }

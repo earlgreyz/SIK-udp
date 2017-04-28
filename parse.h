@@ -4,6 +4,7 @@
 
 #include <exception>
 #include <string>
+#include <boost/lexical_cast.hpp>
 #include "protocol.h"
 
 /**
@@ -41,10 +42,13 @@ public:
  */
 int parse_port(const std::string &input) {
     try {
-        int port = std::stoi(input);
+        int port = boost::lexical_cast<int>(input);
+        if (port < 1 || port > 65535) {
+            throw ParseException("Port must be an integer between 1 and 65,535");
+        }
         return port;
-    } catch (const std::exception &) {
-        throw new ParseException("Port must be an integer");
+    } catch (const boost::bad_lexical_cast &) {
+        throw ParseException("Port must be an integer between 1 and 65,535");
     }
 }
 
@@ -56,7 +60,7 @@ int parse_port(const std::string &input) {
  */
 char parse_character(const std::string &input) {
     if (input.length() != 1) {
-        throw new ParseException("Character must be a single character");
+        throw ParseException("Character must be a single character");
     }
     return input[0];
 }
@@ -68,7 +72,12 @@ char parse_character(const std::string &input) {
  * @throws ArgumentException if input is not a valid timestamp.
  */
 timestamp_t parse_timestamp(const std::string &input) {
-    throw new ParseException("Parsing timestamp not implemented yet");
+    try {
+        timestamp_t timestamp = boost::lexical_cast<uint64_t>(input);
+        return timestamp;
+    } catch (const boost::bad_lexical_cast &) {
+        throw ParseException("Timestamp must be a 64-bit unsigned number");
+    }
 }
 
 
