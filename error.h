@@ -29,5 +29,4 @@ void fatal(const std::string &error_message, Status error_code) {
     exit((int)error_code);
 }
 
-
 #endif //SIK_UDP_ERROR_H

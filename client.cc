@@ -10,7 +10,7 @@ const int DEFAULT_PORT = 20160;
 // Name of an executable program was run as.
 std::string executable;
 // Timestamp to send in packet.
-timestamp_t timestamp;
+sik::timestamp_t timestamp;
 // Character to send in packet.
 char character;
 // Server host.
@@ -44,13 +44,13 @@ void parse_arguments(const int argc, char * const argv[]) {
     }
 
     try {
-        timestamp = parse_timestamp(argv[1]);
-        character = parse_character(argv[2]);
+        timestamp = sik::parse_timestamp(argv[1]);
+        character = sik::parse_character(argv[2]);
         host = argv[3];
         if (argc == 5) {
-            port = parse_port(argv[4]);
+            port = sik::parse_port(argv[4]);
         }
-    } catch (const ParseException &e) {
+    } catch (const sik::ParseException &e) {
         fatal(e.what(), Status::ERROR_ARGS);
     }
 }

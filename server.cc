@@ -34,9 +34,9 @@ void parse_arguments(const int argc, char * const argv[]) {
     }
 
     try {
-        port = parse_port(argv[1]);
+        port = sik::parse_port(argv[1]);
         filename = std::move(argv[2]);
-    } catch (const ParseException &e) {
+    } catch (const sik::ParseException &e) {
         fatal(e.what(), Status::ERROR_ARGS);
     }
 }
