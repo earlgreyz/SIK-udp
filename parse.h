@@ -1,11 +1,11 @@
 #ifndef SIK_UDP_PARSE_H
 #define SIK_UDP_PARSE_H
 
-
 #include <exception>
 #include <string>
 #include <boost/lexical_cast.hpp>
 #include "protocol.h"
+
 
 /**
  * Exception thrown when parsing error occurs.
@@ -74,7 +74,8 @@ char parse_character(const std::string &input) {
 timestamp_t parse_timestamp(const std::string &input) {
     try {
         timestamp_t timestamp = boost::lexical_cast<timestamp_t>(input);
-        if (boost::lexical_cast<std::string>(timestamp) != input) {
+        if (boost::lexical_cast<std::string>(timestamp) != input
+                || !is_proper_timestamp(timestamp)) {
             throw ParseException("Timestamp must be a 64-bit unsigned number");
         }
         return timestamp;

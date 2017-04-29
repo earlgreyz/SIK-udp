@@ -1,7 +1,6 @@
 #include "catch.hpp"
 #include "../parse.h"
 
-
 TEST_CASE("parse_port returns proper data", "[parse_port]") {
     CHECK(parse_port("1") == 1);
     CHECK(parse_port("42") == 42);
@@ -35,13 +34,14 @@ TEST_CASE("parse_character throws errors on invalid input", "[parse_character]")
 TEST_CASE("parse_timestamp returns proper data", "[parse_timestamp]") {
     CHECK(parse_timestamp("0") == 0);
     CHECK(parse_timestamp("42") == 42);
-    REQUIRE(parse_timestamp("18446744073709551615") == 18446744073709551615u);
+    REQUIRE(parse_timestamp("71697398399") == 71697398399u);
 }
 
 TEST_CASE("parse_timestamp throws errors on invalid input", "[parse_timestamp]") {
     CHECK_THROWS_AS(parse_timestamp("-1"), ParseException);
-    REQUIRE_THROWS_AS(parse_timestamp("18446744073709551616"), ParseException);
-    REQUIRE_THROWS_AS(parse_timestamp("100000000000000000000"), ParseException);
+    CHECK_THROWS_AS(parse_timestamp("71697398400"), ParseException);
+    CHECK_THROWS_AS(parse_timestamp("18446744073709551616"), ParseException);
+    CHECK_THROWS_AS(parse_timestamp("100000000000000000000"), ParseException);
 
     CHECK_THROWS_AS(parse_timestamp("abc"), ParseException);
     CHECK_THROWS_AS(parse_timestamp("42abc"), ParseException);
