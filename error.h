@@ -3,11 +3,35 @@
 
 
 #include <iostream>
+#include <exception>
+#include <string>
 
 /**
- * Prints usage - should be defined in program main file.
+ * Base class for Exception with message.
  */
-extern void usage();
+class Exception: public std::exception {
+protected:
+    /// Error message
+    const std::string message;
+public:
+    /**
+     * Constructs Exception with given message.
+     * @param message error message.
+     */
+    explicit Exception(const std::string &message)
+            : message(message) {}
+
+    /**
+     * Constructs Exception with given message.
+     * @param message error message.
+     */
+    explicit Exception(std::string &&message)
+            : message(std::move(message)) {}
+
+    virtual const char * what() const noexcept override {
+        return this->message.c_str();
+    }
+};
 
 /**
  * Available exit codes.
@@ -25,8 +49,7 @@ enum class Status {
  */
 void fatal(const std::string &error_message, Status error_code) {
     std::cerr << error_message << std::endl;
-    usage();
-    exit((int)error_code);
+    exit((int) error_code);
 }
 
 #endif //SIK_UDP_ERROR_H

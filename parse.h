@@ -11,28 +11,10 @@ namespace sik {
     /**
      * Exception thrown when parsing error occurs.
      */
-    class ParseException: public std::exception {
-    private:
-        /// Error message
-        const std::string message;
+    class ParseException: public Exception {
     public:
-        /**
-         * Constructs ParseException with given message.
-         * @param message error message.
-         */
-        explicit ParseException(const std::string &message)
-                : message(message) {}
-
-        /**
-         * Constructs ParseException with given message.
-         * @param message error message.
-         */
-        explicit ParseException(std::string &&message)
-                : message(std::move(message)) {}
-
-        virtual const char * what() const noexcept override {
-            return this->message.c_str();
-        }
+        explicit ParseException(const std::string &message): Exception(message) {}
+        explicit ParseException(std::string &&message): Exception(message) {}
     };
 
     /**
@@ -41,10 +23,10 @@ namespace sik {
      * @return port number.
      * @throws ArgumentException if input is not a valid port number.
      */
-    int parse_port(const std::string &input) {
+    uint16_t parse_port(const std::string &input) {
         try {
-            int port = boost::lexical_cast<int>(input);
-            if (port < 1 || port > 65535) {
+            uint16_t port = boost::lexical_cast<uint16_t>(input);
+            if (boost::lexical_cast<std::string>(port) != input) {
                 throw ParseException("Port must be an integer between 1 and 65,535");
             }
             return port;

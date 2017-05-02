@@ -51,11 +51,12 @@ void parse_arguments(const int argc, char * const argv[]) {
             port = sik::parse_port(argv[4]);
         }
     } catch (const sik::ParseException &e) {
+        usage();
         fatal(e.what(), Status::ERROR_ARGS);
     }
 }
 
 int main(int argc, char * argv[]) {
     parse_arguments(argc, argv);
-    return (int)Status::OK;
+    return (int) Status::OK;
 }

@@ -1,14 +1,18 @@
 #include <iostream>
+#include <csignal>
 #include "error.h"
 #include "parse.h"
+#include "server.h"
 
 
 // Name of an executable program was run as.
 std::string executable;
 // Port given as first parameter.
-int port;
+uint16_t port;
 // File which content will be added to every packet.
 std::string filename;
+// Server
+std::unique_ptr<sik::Server> server;
 
 /**
  * Prints usage.
@@ -37,11 +41,31 @@ void parse_arguments(const int argc, char * const argv[]) {
         port = sik::parse_port(argv[1]);
         filename = std::move(argv[2]);
     } catch (const sik::ParseException &e) {
+        usage();
         fatal(e.what(), Status::ERROR_ARGS);
+    }
+}
+
+void register_signals() {
+    if (signal(SIGINT, [&server](int sig) {
+        server->stop();
+        std::cerr << "Signal " << sig << " Stopping server." << std::endl;
+    }) == SIG_ERR) {
+        fatal("Unable to register signal", Status::ERROR_ARGS);
     }
 }
 
 int main(int argc, char * argv[]) {
     parse_arguments(argc, argv);
-    return (int)Status::OK;
+    register_signals();
+
+    try {
+        server = std::make_unique<sik::Server>(port, filename, 42);
+        server->run();
+    } catch (const sik::ServerException &e) {
+        fatal(e.what(), Status::ERROR_ARGS);
+    } catch (const sik::PollException &e){
+        fatal(e.what(), Status::ERROR_ARGS);
+    }
+    return (int) Status::OK;
 }
