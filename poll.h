@@ -37,7 +37,7 @@ namespace sik {
          */
         void reset_client(pollfd &client) noexcept {
             client.fd = -1;
-            client.events = POLLIN;
+            client.events = 0;
             client.revents = 0;
         }
 
@@ -90,7 +90,7 @@ namespace sik {
          * @throws std::overflow_error when clients array is full.
          * @throws PollException when file descriptor is already in the poll set.
          */
-        void add_descriptor(int fd) {
+        void add_descriptor(int fd, short int events = POLLIN) {
             if (fd < 0) {
                 throw std::invalid_argument("fd must be a positive integer");
             }
@@ -103,6 +103,7 @@ namespace sik {
             try {
                 std::size_t index = get_index(-1);
                 clients[index].fd = fd;
+                clients[index].events = events;
                 active_clients_count++;
             } catch (const std::out_of_range&) {
                 throw std::overflow_error("limit exceeded");
@@ -156,7 +157,8 @@ namespace sik {
             iterator(pollfd *fd) : fd(fd) {}
 
             iterator operator++() noexcept {
-                return iterator(++fd);
+                ++fd;
+                return iterator(fd);
             }
 
             bool operator!=(const iterator &other) const noexcept {
