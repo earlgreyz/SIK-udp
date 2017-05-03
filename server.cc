@@ -46,12 +46,15 @@ void parse_arguments(const int argc, char * const argv[]) {
     }
 }
 
+/**
+ * Registers SIGINT signal.
+ */
 void register_signals() {
-    if (signal(SIGINT, [&server](int sig) {
+    if (signal(SIGINT, [](int sig) {
         server->stop();
         std::cerr << "Signal " << sig << " Stopping server." << std::endl;
     }) == SIG_ERR) {
-        fatal("Unable to register signal", Status::ERROR_ARGS);
+        fatal("Unable to register SIGINT signal", Status::ERROR_ARGS);
     }
 }
 
@@ -60,12 +63,13 @@ int main(int argc, char * argv[]) {
     register_signals();
 
     try {
-        server = std::make_unique<sik::Server>(port, filename, 42);
-        server->run();
+        server = std::make_unique<sik::Server>(port, filename);
     } catch (const sik::ServerException &e) {
         fatal(e.what(), Status::ERROR_ARGS);
     } catch (const sik::PollException &e){
         fatal(e.what(), Status::ERROR_ARGS);
     }
+
+    server->run();
     return (int) Status::OK;
 }

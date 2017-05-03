@@ -3,7 +3,7 @@
 
 
 #include <cstdint>
-#include <string>
+#include "protocol.h"
 
 namespace sik {
     using timestamp_t = uint64_t;
@@ -14,12 +14,33 @@ namespace sik {
     const timestamp_t MAX_TIMESTAMP = 71697398399u;
 
     /**
+     * Message structure.
+     */
+    struct Message {
+        timestamp_t timestamp;
+        char character;
+        char *message;
+
+        Message(timestamp_t timestamp = 0, char character = 0, char *message = nullptr)
+                : timestamp(timestamp), character(character), message(message) {}
+    };
+
+    /**
      * Validates timestamp.
-     * @param timestamp
-     * @return
+     * @param timestamp timestamp to validate.
+     * @return whether timestamp is valid.
      */
     bool inline is_proper_timestamp(timestamp_t timestamp) {
         return timestamp <= MAX_TIMESTAMP;
+    }
+
+    /**
+     * Validates message.
+     * @param message message to validate.
+     * @return whether message is valid.
+     */
+    bool inline is_proper_message(const Message& message) {
+        return is_proper_timestamp(message.timestamp);
     }
 }
 

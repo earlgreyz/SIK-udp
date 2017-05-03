@@ -48,7 +48,8 @@ enum class Status {
  * @param error_code program exit code.
  */
 void fatal(const std::string &error_message, Status error_code) {
-    std::cerr << error_message << std::endl;
+    std::cerr << std::endl << "Process finished with error: "
+              << error_message << std::endl;
     exit((int) error_code);
 }
 

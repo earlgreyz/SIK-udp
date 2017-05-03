@@ -6,7 +6,6 @@
 #include "error.h"
 
 namespace sik {
-    static const std::size_t MAX_CLIENTS = 128;
     /**
      * Exception thrown when poll error occurs.
      */
@@ -22,10 +21,12 @@ namespace sik {
      */
     class PollTimeoutException: public std::exception {};
 
+    template <std::size_t max_clients>
     class Poll {
+        static_assert(max_clients > 0, "Poll size must be greater than 0");
     private:
         /// Poll set.
-        pollfd clients[MAX_CLIENTS];
+        pollfd clients[max_clients];
         /// Maximum size of the poll set.
         const std::size_t clients_length;
         /// Current size of the poll set.
