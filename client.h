@@ -4,10 +4,13 @@
 
 #include <cstdint>
 #include <cstring>
+
+#define _POSIX_C_SOURCE 1
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
+
 #include "error.h"
 #include "protocol.h"
 

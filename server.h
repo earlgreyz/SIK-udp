@@ -1,21 +1,23 @@
 #ifndef SIK_UDP_SERVER_H
 #define SIK_UDP_SERVER_H
 
+#define _POSIX_C_SOURCE 1
 
 #include <cstddef>
 #include <string>
-#include <memory>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#include "poll.h"
+#include "memory.h"
 #include "error.h"
+
+#include "poll.h"
 #include "protocol.h"
 #include "buffer.h"
 
 namespace sik {
-    static const std::size_t MESSAGE_SIZE = sizeof(Message);
-    static const std::size_t PACKET_SIZE = 4096u;
+    static const std::size_t BUFFER_SIZE = 4096u;
     static const std::size_t MAX_CLIENTS = 42;
 
     /**
@@ -41,9 +43,9 @@ namespace sik {
         /// Indicates whether server should terminate.
         bool stopping;
         /// Buffer for data received from clients.
-        char data_buffer[MESSAGE_SIZE];
+        char data_buffer[PACKET_SIZE];
         /// Buffer for queued Messages
-        Buffer<Message, PACKET_SIZE> buffer;
+        Buffer<Message, BUFFER_SIZE> buffer;
 
         /**
          * Opens new UDP socket and saves it to the sock.
@@ -123,7 +125,7 @@ namespace sik {
             open_socket();
             bind_socket(port);
 
-            poll = std::make_unique<Poll<42>>(1);
+            poll = make_unique<Poll<42>>(1);
             poll->add_descriptor(sock, POLLIN | POLLOUT);
         }
 
