@@ -6,6 +6,7 @@
 #include <string>
 #include <boost/lexical_cast.hpp>
 #include "protocol.h"
+#include "error.h"
 
 namespace sik {
     /**
@@ -26,7 +27,7 @@ namespace sik {
     uint16_t parse_port(const std::string &input) {
         try {
             uint16_t port = boost::lexical_cast<uint16_t>(input);
-            if (boost::lexical_cast<std::string>(port) != input) {
+            if (boost::lexical_cast<std::string>(port) != input || port == 0) {
                 throw ParseException("Port must be an integer between 1 and 65,535");
             }
             return port;
