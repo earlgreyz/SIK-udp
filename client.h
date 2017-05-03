@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
 #include "error.h"
@@ -39,6 +40,11 @@ namespace sik {
             throw ClientException("Error opening socket");
         }
 
+        /**
+         * Prepares address structure.
+         * @param host server host.
+         * @param port server port.
+         */
         void setup_address(const std::string &host, uint16_t port) {
             addrinfo addr_hints;
             addrinfo *addr_result;
@@ -59,10 +65,6 @@ namespace sik {
             freeaddrinfo(addr_result);
         }
 
-        void receive() {
-
-        }
-
     public:
         Client(const std::string &host, uint16_t port) {
             setup_address(host, port);
@@ -73,21 +75,61 @@ namespace sik {
             close(sock);
         }
 
-        void send(Message message) {
+        /**
+         * Sends given message to server.
+         * @param message message to send.
+         */
+        void send(const Message &message) {
             std::string bytes = message.to_bytes();
             const char * data = bytes.c_str();
 
             socklen_t address_len = sizeof(address);
-            ssize_t sent_length = sendto(sock, data, bytes.length(), 0,
+            ssize_t sent_length = sendto(sock, data, (ssize_t)bytes.length(), 0,
                                          (sockaddr *)&address, address_len);
+
+            if (sent_length != (ssize_t)bytes.length()) {
+                // TODO: handle error
+            }
         }
 
+        /**
+         * Receives data from server and prints it to the stdout. If given
+         * data is not a valid message prints warning to stderr and.
+         */
+        void receive() {
+            ssize_t length = sizeof(buffer) - 1;
+            sockaddr_in server_address;
+            socklen_t address_len = sizeof(server_address);
+
+            ssize_t received_length = recvfrom(sock, buffer, length, 0,
+                                               (sockaddr *)&server_address, &address_len);
+            if (received_length < 0) {
+                // TODO: handle error
+            }
+
+            try {
+                Message message(buffer);
+                message.print(std::cout);
+            } catch (const std::invalid_argument& e) {
+                std::cerr << "Invalid message received from "
+                          << inet_ntoa(server_address.sin_addr) << ":"
+                          << server_address.sin_port << " with error "
+                          << e.what() << std::endl;
+            }
+        }
+
+        /**
+         * Starts data receiving loop.
+         */
         void run() {
             while(!stopping) {
                 receive();
             }
         }
 
+        /**
+         * Stops data receiving loop.
+         */
         void stop() {
             stopping = true;
         };

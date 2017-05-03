@@ -109,6 +109,10 @@ namespace sik {
             bytes.append(message);
             return std::move(bytes);
         }
+
+        void print(std::ostream &ostream) {
+            ostream << character << message;
+        }
     };
 }
 
