@@ -84,7 +84,7 @@ int main(int argc, char * argv[]) {
         fatal(e.what(), Status::ERROR_ARGS);
     }
 
-    client->send(sik::Message(timestamp, character));
+    client->send(sik::Message(timestamp, character, ""));
     client->run();
 
     return (int) Status::OK;

@@ -15,7 +15,7 @@
 
 namespace sik {
     static const std::size_t MESSAGE_SIZE = sizeof(Message);
-    static const std::size_t BUFFER_SIZE = 4096u;
+    static const std::size_t PACKET_SIZE = 4096u;
     static const std::size_t MAX_CLIENTS = 42;
 
     /**
@@ -43,7 +43,7 @@ namespace sik {
         /// Buffer for data received from clients.
         char data_buffer[MESSAGE_SIZE];
         /// Buffer for queued Messages
-        Buffer<Message, BUFFER_SIZE> buffer;
+        Buffer<Message, PACKET_SIZE> buffer;
 
         /**
          * Opens new UDP socket and saves it to the sock.

@@ -11,8 +11,6 @@
 #include "protocol.h"
 
 namespace sik {
-    /// Maximum IP Packet size is 64 KB we don't want our message to be trimmed.
-    static const std::size_t BUFFER_SIZE = 65536;
 
     /**
      * Exception thrown when server error occurs.
@@ -27,7 +25,7 @@ namespace sik {
     private:
         int sock;
         sockaddr_in address;
-        char buffer[BUFFER_SIZE];
+        char buffer[PACKET_SIZE];
         bool stopping = false;
 
         /**
@@ -75,8 +73,13 @@ namespace sik {
             close(sock);
         }
 
-        void send(const Message& message) {
+        void send(Message message) {
+            std::string bytes = message.to_bytes();
+            const char * data = bytes.c_str();
 
+            socklen_t address_len = sizeof(address);
+            ssize_t sent_length = sendto(sock, data, bytes.length(), 0,
+                                         (sockaddr *)&address, address_len);
         }
 
         void run() {
@@ -86,7 +89,7 @@ namespace sik {
         }
 
         void stop() {
-                stopping = true;
+            stopping = true;
         };
     };
 }

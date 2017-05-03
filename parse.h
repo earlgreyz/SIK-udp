@@ -5,8 +5,9 @@
 #include <exception>
 #include <string>
 #include <boost/lexical_cast.hpp>
-#include "protocol.h"
+
 #include "error.h"
+#include "protocol.h"
 
 namespace sik {
     /**
