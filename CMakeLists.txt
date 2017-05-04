@@ -10,5 +10,5 @@ set(SOURCE_FILES error.h protocol.h parse.h)
 set(TEST_FILES private/tests.cc private/test_protocol.cc private/test_parse.cc private/test_buffer.cc)
 
 add_executable(client client.h client.cc ${SOURCE_FILES} memory.h)
-add_executable(server buffer.h poll.h server.h server.cc ${SOURCE_FILES})
+add_executable(server buffer.h poll.h server.h server.cc ${SOURCE_FILES} connections.h)
 add_executable(tests ${SOURCE_FILES} ${TEST_FILES})

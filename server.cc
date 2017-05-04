@@ -1,5 +1,7 @@
 #include <iostream>
 #include <csignal>
+
+#include "memory.h"
 #include "error.h"
 #include "parse.h"
 #include "server.h"
@@ -63,7 +65,7 @@ int main(int argc, char * argv[]) {
     register_signals();
 
     try {
-        server = std::make_unique<sik::Server>(port, filename);
+        server = make_unique<sik::Server>(port, filename);
     } catch (const sik::ServerException &e) {
         fatal(e.what(), Status::ERROR_ARGS);
     } catch (const sik::PollException &e){

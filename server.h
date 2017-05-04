@@ -1,6 +1,7 @@
 #ifndef SIK_UDP_SERVER_H
 #define SIK_UDP_SERVER_H
 
+// Required in c++11 to include sys/ headers
 #define _POSIX_C_SOURCE 1
 
 #include <cstddef>
@@ -8,6 +9,8 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <map>
 
 #include "memory.h"
 #include "error.h"
@@ -15,6 +18,7 @@
 #include "poll.h"
 #include "protocol.h"
 #include "buffer.h"
+#include "connections.h"
 
 namespace sik {
     static const std::size_t BUFFER_SIZE = 4096u;
@@ -34,18 +38,27 @@ namespace sik {
      */
     class Server {
     private:
+        /// Indicates whether server should terminate.
+        bool stopping = false;
         /// UDP Server socket.
         int sock;
         /// Server address bound to the socket.
         sockaddr_in address;
         /// Poll set.
         std::unique_ptr<Poll<MAX_CLIENTS>> poll;
-        /// Indicates whether server should terminate.
-        bool stopping;
+
         /// Buffer for data received from clients.
         char data_buffer[PACKET_SIZE];
+
+        /// Data type in buffer: (arrival_time, message)
+        using BufferData = std::pair<std::time_t, std::unique_ptr<Message>>;
         /// Buffer for queued Messages
-        Buffer<Message, BUFFER_SIZE> buffer;
+        Buffer<BufferData, BUFFER_SIZE> buffer;
+
+        /// Clients connection time
+        Connections connections;
+        std::queue<sockaddr_in> current_clients;
+        std::unique_ptr<Message> current_message;
 
         /**
          * Opens new UDP socket and saves it to the sock.
@@ -90,28 +103,50 @@ namespace sik {
         }
 
         void receive_data() {
-            sockaddr_in snd_address;
-            socklen_t snda_len;
-            ssize_t length;
+            sockaddr_in client_address;
+            socklen_t address_len = sizeof(client_address);
+            ssize_t length = recvfrom(sock, data_buffer, sizeof(data_buffer), 0,
+                                      (sockaddr *) &client_address, &address_len);
 
-            do {
-                snda_len = sizeof(snd_address);
-                length = recvfrom(sock, data_buffer, sizeof(data_buffer), 0,
-                                  (sockaddr *) &snd_address, &snda_len);
+            if (length < 0) {
+                throw ServerException("Error on datagram to server");
+            }
 
-                if (length < 0) {
-                    if (errno == EWOULDBLOCK) {
-                        break;
-                    }
-                    throw ServerException("Error on datagram to server");
-                }
-
-                std::cout << "Read from socket " << length << " bytes: " << data_buffer << std::endl;
-            } while (length > 0);
+            try {
+                buffer.push(std::make_pair(std::time(0), make_unique<Message>(data_buffer)));
+                connections.add_client(client_address);
+            } catch (const std::invalid_argument& e) {
+                print_message_error(client_address, e.what());
+            }
         }
 
         void send_data() {
+            while (current_clients.size() == 0 && buffer.size() > 0) {
+                BufferData current_item = buffer.pop();
+                current_clients = connections.get_clients(current_item.first);
+                current_message = std::move(current_item.second);
+                current_message->set_message("Lorem ipsum");
+                current_message->print(std::cout);
+            }
 
+            if (current_clients.size() == 0) {
+                // Nothing to send
+                return;
+            }
+
+            sockaddr_in client_address = current_clients.front();
+            socklen_t address_len = sizeof(client_address);
+            current_clients.pop();
+
+            std::string bytes = current_message->to_bytes();
+            const char * data = bytes.c_str();
+
+            ssize_t sent_length = sendto(sock, data, (ssize_t)bytes.length(), 0,
+                                         (sockaddr *)&client_address, address_len);
+
+            if (sent_length != (ssize_t)bytes.length()) {
+                // TODO: handle error
+            }
         }
 
     public:
@@ -120,12 +155,11 @@ namespace sik {
          * @param port port to bind server to.
          * @param filename filename which content to add to every message sent.
          */
-        Server(uint16_t port, const std::string &filename)
-                : stopping(false) {
+        Server(uint16_t port, const std::string &filename) {
             open_socket();
             bind_socket(port);
 
-            poll = make_unique<Poll<42>>(1);
+            poll = make_unique<Poll<MAX_CLIENTS>>(1);
             poll->add_descriptor(sock, POLLIN | POLLOUT);
         }
 

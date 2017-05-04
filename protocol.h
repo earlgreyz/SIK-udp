@@ -6,6 +6,8 @@
 #include <endian.h>
 #include <cstring>
 #include <stdexcept>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "error.h"
 
@@ -51,6 +53,9 @@ namespace sik {
         }
 
     public:
+        Message(const Message&) = delete;
+        Message(Message &&m): timestamp(m.timestamp), character(m.character),
+                              message(std::move(m.message)) {}
         /**
          * Constructs new Message with given parameters.
          * @param timestamp message timestamp.
@@ -80,15 +85,15 @@ namespace sik {
          * - up to 65527 bytes as message (std::string)
          * @param bytes raw bytes with given format
          */
-        Message(const std::string &bytes) {
-            const char *data = bytes.c_str();
+        Message(const char *bytes) {
             // Get first sizeof(timestamp_t) bytes and save it as timestamp
             // after converting from big endian to host number system
-            timestamp = be64toh(((timestamp_t *)data)[0]);
+            timestamp = be64toh(((timestamp_t *)bytes)[0]);
             // Save next byte as the message character
-            character = data[sizeof(timestamp_t)];
+            character = bytes[sizeof(timestamp_t)];
             // Save remaining bytes as message content
-            message = std::move(bytes.substr(sizeof(timestamp_t) + sizeof(char) + 1));
+            const char *data = bytes + sizeof(timestamp_t) + sizeof(char);
+            message = data;
             validate();
         }
 
@@ -112,8 +117,19 @@ namespace sik {
 
         void print(std::ostream &ostream) {
             ostream << character << message;
+            ostream.flush();
+        }
+
+        void set_message(std::string msg) {
+            message = std::move(msg);
         }
     };
+
+    void inline print_message_error(sockaddr_in address, const std::string &e) {
+        std::cerr << "Invalid message received from "
+                  << inet_ntoa(address.sin_addr) << ":" << address.sin_port
+                  << " with error " << e << std::endl;
+    }
 }
 
 #endif //SIK_UDP_PROTOCOL_H
