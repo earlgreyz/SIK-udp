@@ -27,10 +27,12 @@ namespace sik {
     /**
      * Exception thrown when server error occurs.
      */
-    class ServerException: public Exception {
+    class ServerException : public Exception {
     public:
-        explicit ServerException(const std::string &message): Exception(message) {}
-        explicit ServerException(std::string &&message): Exception(message) {}
+        explicit ServerException(const std::string &message) : Exception(
+                message) {}
+
+        explicit ServerException(std::string &&message) : Exception(message) {}
     };
 
     /**
@@ -40,6 +42,7 @@ namespace sik {
     private:
         /// Indicates whether server should terminate.
         bool stopping = false;
+
         /// UDP Server socket.
         int sock;
         /// Server address bound to the socket.
@@ -55,17 +58,22 @@ namespace sik {
         /// Buffer for queued Messages
         Buffer<BufferData, BUFFER_SIZE> buffer;
 
-        /// Clients connection time
-        Connections connections;
-        std::queue<sockaddr_in> current_clients;
+        /// First message received (front of messages stack), ready to send
         std::unique_ptr<Message> current_message;
+
+        /// Client connections
+        Connections connections;
+
+        /// Clients to receive current message
+        std::queue<sockaddr_in> current_clients;
 
         /**
          * Opens new UDP socket and saves it to the sock.
          * @throws ServerException when opening socket fails.
          */
         void open_socket() {
-            if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP)) != -1) {
+            if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK,
+                               IPPROTO_UDP)) != -1) {
                 return;
             }
             throw ServerException("Error opening socket");
@@ -80,57 +88,58 @@ namespace sik {
             address.sin_family = AF_INET;
             address.sin_addr.s_addr = htonl(INADDR_ANY);
             address.sin_port = htons(port);
-            if (bind(sock, (sockaddr *) &address, (socklen_t)sizeof(address)) != -1) {
+            if (bind(sock, (sockaddr *) &address,
+                     (socklen_t) sizeof(address)) != -1) {
                 return;
             }
             throw ServerException("Error binding to socket");
         }
 
         /**
-         * One turn of server main loop.
+         * Handles receiving data from client.
          */
-        void cycle() {
-            poll->wait(-1);
-            if (stopping) {
-                return;
-            }
-
-            if ((*poll)[sock].revents & POLLIN) {
-                receive_data();
-            } else if ((*poll)[sock].revents & POLLOUT) {
-                send_data();
-            }
-        }
-
-        void receive_data() {
+        void receive_data() noexcept {
             sockaddr_in client_address;
             socklen_t address_len = sizeof(client_address);
-            ssize_t length = recvfrom(sock, data_buffer, sizeof(data_buffer), 0,
-                                      (sockaddr *) &client_address, &address_len);
+            ssize_t length = recvfrom(
+                    sock, data_buffer, sizeof(data_buffer), 0,
+                    (sockaddr *) &client_address, &address_len);
 
             if (length < 0) {
-                throw ServerException("Error on datagram to server");
+                // TODO: Error handling
             }
 
             try {
-                buffer.push(std::make_pair(std::time(0), make_unique<Message>(data_buffer)));
-                connections.add_client(client_address);
-            } catch (const std::invalid_argument& e) {
+                // Add received message to the buffer
+                buffer.push(std::make_pair(
+                        std::time(0),
+                        make_unique<Message>(data_buffer)));
+            } catch (const std::invalid_argument &e) {
                 print_message_error(client_address, e.what());
             }
+            // Add client address to send him messages.
+            connections.add_client(client_address);
         }
 
-        void send_data() {
+        /**
+         * Prepares data to send to client.
+         */
+        void get_send_data() {
             while (current_clients.size() == 0 && buffer.size() > 0) {
                 BufferData current_item = buffer.pop();
                 current_clients = connections.get_clients(current_item.first);
                 current_message = std::move(current_item.second);
                 current_message->set_message("Lorem ipsum");
-                current_message->print(std::cout);
             }
+        }
 
+        /**
+         * Sends data of current_message to the first client in current_clients
+         * list. If there are no clients left moves onto next message.
+         */
+        void send_data() noexcept {
+            get_send_data();
             if (current_clients.size() == 0) {
-                // Nothing to send
                 return;
             }
 
@@ -139,12 +148,13 @@ namespace sik {
             current_clients.pop();
 
             std::string bytes = current_message->to_bytes();
-            const char * data = bytes.c_str();
+            const char *data = bytes.c_str();
 
-            ssize_t sent_length = sendto(sock, data, (ssize_t)bytes.length(), 0,
-                                         (sockaddr *)&client_address, address_len);
+            ssize_t sent_length = sendto(
+                    sock, data, (ssize_t) bytes.length(), 0,
+                    (sockaddr *) &client_address, address_len);
 
-            if (sent_length != (ssize_t)bytes.length()) {
+            if (sent_length != (ssize_t) bytes.length()) {
                 // TODO: handle error
             }
         }
@@ -163,17 +173,36 @@ namespace sik {
             poll->add_descriptor(sock, POLLIN | POLLOUT);
         }
 
+        /**
+         * Destroys server.
+         */
         ~Server() {
             close(sock);
         }
 
-        void run() {
+        /**
+         * Starts server loop, going forever until stop method is called
+         * through system interrupt function.
+         */
+        void run() noexcept {
             while (!stopping) {
-                cycle();
+                poll->wait(-1);
+                if (stopping) {
+                    return;
+                }
+
+                if ((*poll)[sock].revents & POLLIN) {
+                    receive_data();
+                } else if ((*poll)[sock].revents & POLLOUT) {
+                    send_data();
+                }
             }
         }
 
-        void stop() {
+        /**
+         * Stops server main loop.
+         */
+        void stop() noexcept {
             stopping = false;
         }
     };
