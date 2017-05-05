@@ -33,10 +33,11 @@ namespace sik {
     private:
         /// Message timestamp
         timestamp_t timestamp;
-        /// Message character
+        /// Message character.
         char character;
-        /// Message content
+        /// Message content.
         std::string message;
+
 
         /**
          * Validates if the message data is compatible with the specification.
@@ -49,6 +50,10 @@ namespace sik {
         }
 
     public:
+        // Bytes offset of message content.
+        static const std::size_t message_offset
+                = sizeof(timestamp_t) + sizeof(char);
+
         Message(const Message &) = delete;
 
         Message(Message &&m) : timestamp(m.timestamp), character(m.character),
@@ -86,7 +91,7 @@ namespace sik {
          * @param bytes raw bytes with given format
          */
         Message(const char *bytes, std::size_t length) {
-            if (length < sizeof(timestamp_t) + sizeof(char)) {
+            if (length < message_offset) {
                 throw std::invalid_argument("Invalid message data");
             }
             // Get first sizeof(timestamp_t) bytes and save it as timestamp
@@ -95,7 +100,7 @@ namespace sik {
             // Save next byte as the message character
             character = bytes[sizeof(timestamp_t)];
             // Save remaining bytes as message content
-            const char *data = bytes + sizeof(timestamp_t) + sizeof(char);
+            const char *data = bytes + message_offset;
             message = data;
             validate();
         }
@@ -108,7 +113,7 @@ namespace sik {
          * @return raw bytes representing message
          */
         std::string to_bytes() const noexcept {
-            std::string bytes(sizeof(timestamp_t) + sizeof(char), 0);
+            std::string bytes(message_offset, 0);
             // Save timestamp in big endian form at the beginning of the data
             ((timestamp_t *) bytes.c_str())[0] = htobe64(timestamp);
             // Save character after the timestamp
@@ -121,16 +126,24 @@ namespace sik {
         /**
          * Sets message to given string.
          * @param msg new message.
+         * @throws std::invalid_argument if message is too long.
          */
         void set_message(const std::string &msg) {
+            if (msg.length() > PACKET_SIZE - message_offset) {
+                throw std::invalid_argument("Message to long");
+            }
             message = msg;
         }
 
         /**
          * Sets message to given string.
          * @param msg new message.
+         * @throws std::invalid_argument if message is too long.
          */
         void set_message(std::string &&msg) {
+            if (msg.length() > PACKET_SIZE - message_offset) {
+                throw std::invalid_argument("Message to long");
+            }
             message = std::move(msg);
         }
 

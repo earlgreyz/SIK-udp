@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <fcntl.h>
 
 #include "poll.h"
 #include "buffer.h"
@@ -43,6 +44,8 @@ namespace sik {
         bool stopping = false;
         /// UDP Server socket.
         int sock;
+        /// File content to add to every message.
+        std::string file_content;
         /// Server address bound to the socket.
         sockaddr_in address;
         /// Poll set.
@@ -86,10 +89,36 @@ namespace sik {
         }
 
         /**
+         * Opens file socket for read only use.
+         * @param filename file to open.
+         */
+        void read_file(const std::string &filename) {
+            int file;
+
+            if ((file = open(filename.c_str(), O_RDONLY)) == -1) {
+                throw ServerException("Could not open file");
+            }
+
+            char buffer[PACKET_SIZE - Message::message_offset];
+            ssize_t len = read(file, buffer, sizeof(buffer));
+            if (len == -1) {
+                close(file);
+                throw ServerException("Error reading file content");
+            } else if (len == sizeof(buffer)) {
+                std::cerr << "File content too long trimming" << std::endl;
+                len--;
+            }
+
+            buffer[len] = '\0';
+            file_content = buffer;
+            close(file);
+        }
+
+        /**
          * Handles receiving data from client.
          */
         void receive() noexcept {
-            sockaddr_in client_address;
+            sockaddr_in client_address = sockaddr_in();
             try {
                 Receiver receiver(sock);
                 std::unique_ptr<Message> message =
@@ -116,7 +145,7 @@ namespace sik {
                 BufferData current_item = buffer->pop();
                 current_clients = connections->get_clients(current_item.first);
                 current_message = std::move(current_item.second);
-                current_message->set_message("Lorem ipsum");
+                current_message->set_message(file_content);
             }
         }
 
@@ -148,6 +177,8 @@ namespace sik {
          */
         Server(uint16_t port, const std::string &filename) {
             open_socket();
+            read_file(filename);
+
             bind_socket(port);
 
             poll = std::make_unique<Poll<1>>();
@@ -162,7 +193,9 @@ namespace sik {
          * Destroys server.
          */
         ~Server() {
-            close(sock);
+            if (close(sock) == -1) {
+                std::cerr << "Error closing server socket" << std::endl;
+            }
         }
 
         /**
