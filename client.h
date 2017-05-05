@@ -5,8 +5,6 @@
 #include <cstdint>
 #include <cstring>
 
-#define _POSIX_C_SOURCE 1
-
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -104,10 +102,9 @@ namespace sik {
                 Receiver receiver(sock);
                 std::unique_ptr<Message> message
                         = receiver.receive_message(server_address);
-                std::cout << *message;
-                std::cout.flush();
+                std::cout << *message << std::endl;
             } catch (const std::invalid_argument& e) {
-                print_message_error(address, e.what());
+                print_error(address, e.what());
             } catch (const ConnectionException&) {
                 // TODO: handle exception
             }

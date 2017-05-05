@@ -6,6 +6,9 @@
 #include <exception>
 #include <string>
 
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 /**
  * Base class for Exception with message.
  */
@@ -32,6 +35,17 @@ public:
         return this->message.c_str();
     }
 };
+
+/**
+ * Prints error after receiving invalid message.
+ * @param address address of client who sent an invalid message.
+ * @param e error message.
+ */
+void inline print_error(sockaddr_in address, const std::string &e) {
+    std::cerr << "Invalid message received from "
+              << inet_ntoa(address.sin_addr) << ":" << address.sin_port
+              << " with error " << e << std::endl;
+}
 
 /**
  * Available exit codes.

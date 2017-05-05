@@ -6,16 +6,12 @@
 #include <endian.h>
 #include <cstring>
 #include <stdexcept>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-#include "error.h"
 
 namespace sik {
     using timestamp_t = uint64_t;
 
     /// Minimum valid timestamp: Friday, 01-Jan-17 00:00:00 UTC in RFC 2822
-    //const int64_t MIN_TIMESTAMP = -7983878400;
+    // const int64_t MIN_TIMESTAMP = -7983878400;
     /// Maximum valid timestamp: Friday, 31-Dec-41 23:59:59 UTC in RFC 2822
     const timestamp_t MAX_TIMESTAMP = 71697398399u;
     /// Maximum IP Packet size - 64KB.
@@ -122,21 +118,34 @@ namespace sik {
             return std::move(bytes);
         }
 
-        void set_message(std::string msg) {
+        /**
+         * Sets message to given string.
+         * @param msg new message.
+         */
+        void set_message(const std::string &msg) {
+            message = msg;
+        }
+
+        /**
+         * Sets message to given string.
+         * @param msg new message.
+         */
+        void set_message(std::string &&msg) {
             message = std::move(msg);
         }
 
-        friend std::ostream& operator<<(std::ostream&, const Message&);
+        friend std::ostream &operator<<(std::ostream &, const Message &);
     };
 
-    std::ostream& operator<<(std::ostream& os, const Message& m) {
-        os << m.character << m.message;
-    }
-
-    void inline print_message_error(sockaddr_in address, const std::string &e) {
-        std::cerr << "Invalid message received from "
-                  << inet_ntoa(address.sin_addr) << ":" << address.sin_port
-                  << " with error " << e << std::endl;
+    /**
+     * Prints Message.
+     * @param os stream to print to.
+     * @param m message to print.
+     * @return stream.
+     */
+    std::ostream &operator<<(std::ostream &os, const Message &m) {
+        os << m.timestamp << " " << m.character << " " << m.message;
+        return os;
     }
 }
 

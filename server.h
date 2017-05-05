@@ -1,22 +1,20 @@
 #ifndef SIK_UDP_SERVER_H
 #define SIK_UDP_SERVER_H
 
-// Required in c++11 to include sys/ headers
-#define _POSIX_C_SOURCE 1
 
 #include <cstddef>
 #include <string>
+#include <memory>
 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include "memory.h"
+#include <unistd.h>
 
 #include "poll.h"
-#include "protocol.h"
 #include "buffer.h"
 #include "connections.h"
+#include "protocol.h"
 #include "communication.h"
 
 namespace sik {
@@ -101,7 +99,7 @@ namespace sik {
                         std::move(message)
                 ));
             } catch (const std::invalid_argument &e) {
-                print_message_error(client_address, e.what());
+                print_error(client_address, e.what());
             } catch (const ConnectionException &) {
                 // TODO: Error handling
             }
@@ -152,9 +150,9 @@ namespace sik {
             open_socket();
             bind_socket(port);
 
-            poll = make_unique<Poll<1>>();
-            buffer = make_unique<Buffer<BufferData, buffer_size>>();
-            connections = make_unique<Connections>();
+            poll = std::make_unique<Poll<1>>();
+            buffer = std::make_unique<Buffer<BufferData, buffer_size>>();
+            connections = std::make_unique<Connections>();
 
             poll->add_descriptor(sock, POLLIN | POLLOUT);
 

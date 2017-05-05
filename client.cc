@@ -1,7 +1,6 @@
 #include <csignal>
 #include <iostream>
-
-#include "memory.h"
+#include <memory>
 
 #include "protocol.h"
 #include "parse.h"
@@ -80,12 +79,12 @@ int main(int argc, char * argv[]) {
     register_signals();
 
     try {
-        client = make_unique<sik::Client>(host, port);
+        client = std::make_unique<sik::Client>(host, port);
     } catch (const sik::ClientException &e) {
         fatal(e.what(), Status::ERROR_ARGS);
     }
 
-    client->send(make_unique<sik::Message>(timestamp, character, ""));
+    client->send(std::make_unique<sik::Message>(timestamp, character, ""));
     client->run();
 
     return (int) Status::OK;

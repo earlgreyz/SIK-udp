@@ -2,7 +2,8 @@
 #define SIK_UDP_SENDER_H
 
 #include <string>
-#include "memory.h"
+#include <memory>
+
 #include "error.h"
 #include "protocol.h"
 
@@ -90,7 +91,7 @@ namespace sik {
             }
             buffer[length + 1] = '\0';
 
-            return make_unique<Message>(buffer, (std::size_t) length);
+            return std::make_unique<Message>(buffer, (std::size_t) length);
         }
     };
 }
