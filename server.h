@@ -17,6 +17,7 @@
 #include "connections.h"
 #include "protocol.h"
 #include "communication.h"
+#include "file.h"
 
 namespace sik {
     /**
@@ -35,7 +36,7 @@ namespace sik {
      * Server
      * @tparam buffer_size size of the datagram buffer.
      */
-    template <std::size_t buffer_size>
+    template<std::size_t buffer_size>
     class Server {
         /// Data type in buffer: (arrival_time, message)
         using BufferData = std::pair<std::time_t, std::unique_ptr<Message>>;
@@ -61,15 +62,20 @@ namespace sik {
         /// Clients to receive current message
         std::queue<sockaddr_in> current_clients;
 
+        /// Message sender
+        std::unique_ptr<Sender> sender;
+        /// Message receiver
+        std::unique_ptr<Receiver> receiver;
+
         /**
          * Opens new UDP socket and saves it to the sock.
          * @throws ServerException when opening socket fails.
          */
         void open_socket() {
-            if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1) {
-                return;
+            sock = socket(AF_INET, SOCK_DGRAM | O_NONBLOCK, IPPROTO_UDP);
+            if (sock < 0) {
+                throw ServerException("Error opening socket");
             }
-            throw ServerException("Error opening socket");
         }
 
         /**
@@ -81,11 +87,11 @@ namespace sik {
             address.sin_family = AF_INET;
             address.sin_addr.s_addr = htonl(INADDR_ANY);
             address.sin_port = htons(port);
-            if (bind(sock, (sockaddr *) &address,
-                     (socklen_t) sizeof(address)) != -1) {
-                return;
+            int binding_result = bind(sock, (sockaddr *) &address,
+                                      (socklen_t) sizeof(address));
+            if (binding_result < 0) {
+                throw ServerException("Error binding to socket");
             }
-            throw ServerException("Error binding to socket");
         }
 
         /**
@@ -93,25 +99,15 @@ namespace sik {
          * @param filename file to open.
          */
         void read_file(const std::string &filename) {
-            int file;
-
-            if ((file = open(filename.c_str(), O_RDONLY)) == -1) {
-                throw ServerException("Could not open file");
+            try {
+                File file(filename);
+                file_content = file.read_content(
+                        PACKET_SIZE - Message::message_offset);
+            } catch (const std::invalid_argument &e) {
+                throw ServerException(e.what());
+            } catch (const std::runtime_error &e) {
+                throw ServerException(e.what());
             }
-
-            char buffer[PACKET_SIZE - Message::message_offset];
-            ssize_t len = read(file, buffer, sizeof(buffer));
-            if (len == -1) {
-                close(file);
-                throw ServerException("Error reading file content");
-            } else if (len == sizeof(buffer)) {
-                std::cerr << "File content too long trimming" << std::endl;
-                len--;
-            }
-
-            buffer[len] = '\0';
-            file_content = buffer;
-            close(file);
         }
 
         /**
@@ -120,13 +116,9 @@ namespace sik {
         void receive() noexcept {
             sockaddr_in client_address = sockaddr_in();
             try {
-                Receiver receiver(sock);
                 std::unique_ptr<Message> message =
-                        receiver.receive_message(client_address);
-                buffer->push(std::make_pair(
-                        std::time(0),
-                        std::move(message)
-                ));
+                        receiver->receive_message(client_address);
+                buffer->push(std::make_pair(std::time(0), std::move(message)));
             } catch (const std::invalid_argument &e) {
                 print_error(client_address, e.what());
             } catch (const ConnectionException &) {
@@ -163,8 +155,10 @@ namespace sik {
             current_clients.pop();
 
             try {
-                Sender(sock).send_message(client_address, current_message);
-            } catch (const ConnectionException &e) {
+                sender->send_message(client_address, current_message);
+            } catch (const WouldBlockException &) {
+                current_clients.push(client_address);
+            } catch (const ConnectionException &) {
                 // TODO: error handling
             }
         }
@@ -177,23 +171,23 @@ namespace sik {
          */
         Server(uint16_t port, const std::string &filename) {
             open_socket();
+            bind_socket(port);
             read_file(filename);
 
-            bind_socket(port);
-
-            poll = std::make_unique<Poll<1>>();
             buffer = std::make_unique<Buffer<BufferData, buffer_size>>();
             connections = std::make_unique<Connections>();
-
+            poll = std::make_unique<Poll<1>>();
             poll->add_descriptor(sock, POLLIN | POLLOUT);
 
+            sender = std::make_unique<Sender>(sock);
+            receiver = std::make_unique<Receiver>(sock);
         }
 
         /**
          * Destroys server.
          */
         ~Server() {
-            if (close(sock) == -1) {
+            if (close(sock) < 0) {
                 std::cerr << "Error closing server socket" << std::endl;
             }
         }
@@ -203,6 +197,7 @@ namespace sik {
          * through system interrupt function.
          */
         void run() noexcept {
+            stopping = false;
             while (!stopping) {
                 poll->wait(-1);
                 if (stopping) {

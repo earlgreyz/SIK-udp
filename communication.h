@@ -4,20 +4,18 @@
 #include <string>
 #include <memory>
 
-#include "error.h"
 #include "protocol.h"
 
 namespace sik {
     /**
      * Exception thrown when Sender or Receiver error occurs.
      */
-    class ConnectionException : public Exception {
-    public:
-        explicit ConnectionException(const std::string &message) : Exception(
-                message) {}
-        explicit ConnectionException(std::string &&message) : Exception(
-                std::move(message)) {}
-    };
+    class ConnectionException : public std::exception {};
+
+    /**
+     * Exception thrown when function finishes with EWOULDBLOCK errno.
+     */
+    class WouldBlockException : public std::exception {};
 
     /**
      * Class for sending messages over socket.
@@ -37,6 +35,7 @@ namespace sik {
          * Sends message to given address.
          * @param address receiver address.
          * @param message message to send.
+         * @throws WouldBlockException if sento finishes with errno EWOULDBLOCK
          * @throws ConnectionException when sendto finishes with error
          */
         void send_message(const sockaddr_in &address,
@@ -50,8 +49,12 @@ namespace sik {
             length = sendto(sock, data, (ssize_t) bytes.length(), 0,
                             (sockaddr *) &address, address_len);
 
+            if (length < 0 && errno == EWOULDBLOCK) {
+                throw WouldBlockException();
+            }
+
             if (length != (ssize_t) bytes.length()) {
-                throw ConnectionException("Error sending message");
+                throw ConnectionException();
             }
         }
     };
@@ -87,7 +90,7 @@ namespace sik {
             length = recvfrom(sock, buffer, sizeof(buffer) - 1, 0,
                               (sockaddr *) &address, &address_len);
             if (length < 0) {
-                throw ConnectionException("Error receiving data");
+                throw ConnectionException();
             }
             buffer[length + 1] = '\0';
 

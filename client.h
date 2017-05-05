@@ -29,19 +29,25 @@ namespace sik {
 
     class Client {
     private:
+        /// Socket
         int sock;
+        /// Server address
         sockaddr_in address;
+        /// Indicates whether client loop should stop
         bool stopping = false;
+        /// Message sender
+        std::unique_ptr<Sender> sender;
+        /// Message receiver
+        std::unique_ptr<Receiver> receiver;
 
         /**
          * Opens new UDP socket and saves it to the sock.
          * @throws ServerException when opening socket fails.
          */
         void open_socket() {
-            if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1) {
-                return;
+            if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+                throw ClientException("Error opening socket");
             }
-            throw ClientException("Error opening socket");
         }
 
         /**
@@ -74,6 +80,9 @@ namespace sik {
         Client(const std::string &host, uint16_t port) {
             setup_address(host, port);
             open_socket();
+
+            sender = std::make_unique<Sender>(sock);
+            receiver = std::make_unique<Receiver>(sock);
         }
 
         ~Client() {
@@ -86,8 +95,8 @@ namespace sik {
          */
         void send(const std::unique_ptr<Message> &message) {
             try {
-                Sender(sock).send_message(address, message);
-            } catch (const ConnectionException&) {
+                sender->send_message(address, message);
+            } catch (const std::exception&) {
                 // TODO: error handling
             }
         }
@@ -99,9 +108,8 @@ namespace sik {
         void receive() {
             sockaddr_in server_address = sockaddr_in();
             try {
-                Receiver receiver(sock);
                 std::unique_ptr<Message> message
-                        = receiver.receive_message(server_address);
+                        = receiver->receive_message(server_address);
                 std::cout << *message << std::endl;
             } catch (const std::invalid_argument& e) {
                 print_error(address, e.what());
@@ -114,6 +122,7 @@ namespace sik {
          * Starts data receiving loop.
          */
         void run() {
+            stopping = false;
             while (!stopping) {
                 receive();
             }

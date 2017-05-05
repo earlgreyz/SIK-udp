@@ -70,8 +70,6 @@ int main(int argc, char * argv[]) {
         server = std::make_unique<sik::Server<BUFFER_SIZE>>(port, filename);
     } catch (const sik::ServerException &e) {
         fatal(e.what(), Status::ERROR_ARGS);
-    } catch (const sik::PollException &e){
-        fatal(e.what(), Status::ERROR_ARGS);
     }
 
     server->run();
