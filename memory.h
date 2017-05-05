@@ -1,5 +1,9 @@
+/**
+ * @file Adds make_unique (available in c++14) to standard memory library.
+ */
 #ifndef SIK_UDP_MEMORY_H
 #define SIK_UDP_MEMORY_H
+
 
 #include <memory>
 

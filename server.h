@@ -12,7 +12,6 @@
 #include <arpa/inet.h>
 
 #include "memory.h"
-#include "error.h"
 
 #include "poll.h"
 #include "protocol.h"
@@ -21,9 +20,6 @@
 #include "communication.h"
 
 namespace sik {
-    static const std::size_t BUFFER_SIZE = 4096u;
-    static const std::size_t MAX_CLIENTS = 42;
-
     /**
      * Exception thrown when server error occurs.
      */
@@ -31,34 +27,36 @@ namespace sik {
     public:
         explicit ServerException(const std::string &message) : Exception(
                 message) {}
+
         explicit ServerException(std::string &&message) : Exception(
                 std::move(message)) {}
     };
 
     /**
-     * UDP Server
+     * Server
+     * @tparam buffer_size size of the datagram buffer.
      */
+    template <std::size_t buffer_size>
     class Server {
+        /// Data type in buffer: (arrival_time, message)
+        using BufferData = std::pair<std::time_t, std::unique_ptr<Message>>;
     private:
         /// Indicates whether server should terminate.
         bool stopping = false;
-
         /// UDP Server socket.
         int sock;
         /// Server address bound to the socket.
         sockaddr_in address;
         /// Poll set.
-        std::unique_ptr<Poll<MAX_CLIENTS>> poll;
+        std::unique_ptr<Poll<1>> poll;
 
-        /// Data type in buffer: (arrival_time, message)
-        using BufferData = std::pair<std::time_t, std::unique_ptr<Message>>;
         /// Buffer for queued Messages
-        Buffer<BufferData, BUFFER_SIZE> buffer;
+        std::unique_ptr<Buffer<BufferData, buffer_size>> buffer;
         /// First message received (front of messages stack), ready to send
         std::unique_ptr<Message> current_message;
 
         /// Client connections
-        Connections connections;
+        std::unique_ptr<Connections> connections;
         /// Clients to receive current message
         std::queue<sockaddr_in> current_clients;
 
@@ -92,33 +90,33 @@ namespace sik {
         /**
          * Handles receiving data from client.
          */
-        void receive_data() noexcept {
+        void receive() noexcept {
             sockaddr_in client_address;
             try {
                 Receiver receiver(sock);
                 std::unique_ptr<Message> message =
                         receiver.receive_message(client_address);
-                buffer.push(std::make_pair(
+                buffer->push(std::make_pair(
                         std::time(0),
                         std::move(message)
                 ));
             } catch (const std::invalid_argument &e) {
                 print_message_error(client_address, e.what());
-            } catch (const ConnectionException&) {
+            } catch (const ConnectionException &) {
                 // TODO: Error handling
             }
 
             // Add client address to send him messages.
-            connections.add_client(client_address);
+            connections->add_client(client_address);
         }
 
         /**
          * Prepares data to send to client.
          */
-        void get_send_data() {
-            while (current_clients.size() == 0 && buffer.size() > 0) {
-                BufferData current_item = buffer.pop();
-                current_clients = connections.get_clients(current_item.first);
+        void prepare_send_data() {
+            while (current_clients.size() == 0 && buffer->size() > 0) {
+                BufferData current_item = buffer->pop();
+                current_clients = connections->get_clients(current_item.first);
                 current_message = std::move(current_item.second);
                 current_message->set_message("Lorem ipsum");
             }
@@ -128,8 +126,8 @@ namespace sik {
          * Sends data of current_message to the first client in current_clients
          * list. If there are no clients left moves onto next message.
          */
-        void send_data() noexcept {
-            get_send_data();
+        void send() noexcept {
+            prepare_send_data();
             if (current_clients.size() == 0) {
                 return;
             }
@@ -138,8 +136,8 @@ namespace sik {
             current_clients.pop();
 
             try {
-                Sender(sock).send_message(client_address, *current_message);
-            } catch (const ConnectionException& e) {
+                Sender(sock).send_message(client_address, current_message);
+            } catch (const ConnectionException &e) {
                 // TODO: error handling
             }
         }
@@ -154,8 +152,12 @@ namespace sik {
             open_socket();
             bind_socket(port);
 
-            poll = make_unique<Poll<MAX_CLIENTS>>(1);
+            poll = make_unique<Poll<1>>();
+            buffer = make_unique<Buffer<BufferData, buffer_size>>();
+            connections = make_unique<Connections>();
+
             poll->add_descriptor(sock, POLLIN | POLLOUT);
+
         }
 
         /**
@@ -177,9 +179,9 @@ namespace sik {
                 }
 
                 if ((*poll)[sock].revents & POLLIN) {
-                    receive_data();
+                    receive();
                 } else if ((*poll)[sock].revents & POLLOUT) {
-                    send_data();
+                    send();
                 }
             }
         }
@@ -188,7 +190,7 @@ namespace sik {
          * Stops server main loop.
          */
         void stop() noexcept {
-            stopping = false;
+            stopping = true;
         }
     };
 }

@@ -122,15 +122,16 @@ namespace sik {
             return std::move(bytes);
         }
 
-        void print(std::ostream &ostream) {
-            ostream << character << message;
-            ostream.flush();
-        }
-
         void set_message(std::string msg) {
             message = std::move(msg);
         }
+
+        friend std::ostream& operator<<(std::ostream&, const Message&);
     };
+
+    std::ostream& operator<<(std::ostream& os, const Message& m) {
+        os << m.character << m.message;
+    }
 
     void inline print_message_error(sockaddr_in address, const std::string &e) {
         std::cerr << "Invalid message received from "

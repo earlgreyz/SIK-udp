@@ -33,7 +33,6 @@ namespace sik {
     private:
         int sock;
         sockaddr_in address;
-        char buffer[PACKET_SIZE];
         bool stopping = false;
 
         /**
@@ -87,7 +86,7 @@ namespace sik {
          * Sends given message to server.
          * @param message message to send.
          */
-        void send(const Message &message) {
+        void send(const std::unique_ptr<Message> &message) {
             try {
                 Sender(sock).send_message(address, message);
             } catch (const ConnectionException&) {
@@ -100,12 +99,13 @@ namespace sik {
          * data is not a valid message prints warning to stderr and.
          */
         void receive() {
-            sockaddr_in server_address;
+            sockaddr_in server_address = sockaddr_in();
             try {
                 Receiver receiver(sock);
                 std::unique_ptr<Message> message
                         = receiver.receive_message(server_address);
-                message->print(std::cout);
+                std::cout << *message;
+                std::cout.flush();
             } catch (const std::invalid_argument& e) {
                 print_message_error(address, e.what());
             } catch (const ConnectionException&) {

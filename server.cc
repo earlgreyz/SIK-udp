@@ -6,6 +6,7 @@
 #include "parse.h"
 #include "server.h"
 
+const std::size_t BUFFER_SIZE = 4096u;
 
 // Name of an executable program was run as.
 std::string executable;
@@ -14,7 +15,7 @@ uint16_t port;
 // File which content will be added to every packet.
 std::string filename;
 // Server
-std::unique_ptr<sik::Server> server;
+std::unique_ptr<sik::Server<BUFFER_SIZE>> server;
 
 /**
  * Prints usage.
@@ -66,7 +67,7 @@ int main(int argc, char * argv[]) {
     register_signals();
 
     try {
-        server = make_unique<sik::Server>(port, filename);
+        server = make_unique<sik::Server<BUFFER_SIZE>>(port, filename);
     } catch (const sik::ServerException &e) {
         fatal(e.what(), Status::ERROR_ARGS);
     } catch (const sik::PollException &e){

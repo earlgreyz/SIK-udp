@@ -27,10 +27,8 @@ namespace sik {
     private:
         /// Poll set.
         pollfd clients[max_clients];
-        /// Maximum size of the poll set.
-        const std::size_t clients_length;
         /// Current size of the poll set.
-        std::size_t active_clients_count;
+        std::size_t clients_length;
 
         /**
          * Resets the element of the poll set to default state.
@@ -50,7 +48,7 @@ namespace sik {
          * @throws std::out_of_range when fd is not in the poll set.
          */
         std::size_t get_index(int fd) const {
-            for (std::size_t i = 0; i < clients_length; i++) {
+            for (std::size_t i = 0; i < max_clients; i++) {
                 if (clients[i].fd == fd) {
                     return i;
                 }
@@ -61,10 +59,8 @@ namespace sik {
     public:
         /**
          * Constructs new poll set.
-         * @param clients_length maximum size of poll set.
          */
-        Poll(std::size_t clients_length) noexcept
-                : clients_length(clients_length), active_clients_count(0u) {
+        Poll() noexcept: clients_length(0u) {
             for (pollfd& client: clients) {
                 reset_client(client);
             }
@@ -105,7 +101,7 @@ namespace sik {
                 std::size_t index = get_index(-1);
                 clients[index].fd = fd;
                 clients[index].events = events;
-                active_clients_count++;
+                clients_length++;
             } catch (const std::out_of_range&) {
                 throw std::overflow_error("limit exceeded");
             }
@@ -123,9 +119,9 @@ namespace sik {
             }
 
             std::size_t index = get_index(fd);
-            clients[index] = clients[active_clients_count];
-            reset_client(clients[active_clients_count]);
-            active_clients_count--;
+            clients[index] = clients[clients_length];
+            reset_client(clients[clients_length]);
+            clients_length--;
         }
 
         /**
@@ -182,7 +178,7 @@ namespace sik {
          * @return iterator to the last element of events array.
          */
         iterator end() {
-            return Poll::iterator(clients + active_clients_count);
+            return Poll::iterator(clients + clients_length);
         }
     };
 }
