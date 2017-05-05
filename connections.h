@@ -20,7 +20,8 @@ namespace sik {
 
             Client(sockaddr_in address, timestamp_t timestamp)
                     : address(std::move(address)) {
-                connections.push(std::make_pair(timestamp, timestamp + TIMEOUT));
+                connections.push(
+                        std::make_pair(timestamp, timestamp + TIMEOUT));
             }
 
             void add_connection(std::time_t timestamp) noexcept {
@@ -33,7 +34,8 @@ namespace sik {
             }
         };
 
-        bool in_bounds(std::time_t timestamp, const Interval &interval) const noexcept {
+        bool in_bounds(std::time_t timestamp,
+                       const Interval &interval) const noexcept {
             return timestamp >= interval.first && timestamp <= interval.second;
         }
 
@@ -45,9 +47,9 @@ namespace sik {
          */
         void add_client(sockaddr_in address) {
             std::time_t now = std::time(0);
-            for (auto& client: clients) {
+            for (auto &client: clients) {
                 if (client.address.sin_addr.s_addr == address.sin_addr.s_addr
-                        && client.address.sin_port == address.sin_port) {
+                    && client.address.sin_port == address.sin_port) {
                     client.add_connection(now);
                     return;
                 }

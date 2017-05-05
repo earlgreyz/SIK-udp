@@ -36,6 +36,7 @@ void parse_arguments(const int argc, char * const argv[]) {
     executable = std::move(argv[0]);
 
     if (argc != 3) {
+        usage();
         fatal("Invalid arguments count", Status::ERROR_ARGS);
     }
 

@@ -10,9 +10,10 @@
  * @tparam T type of element.
  * @tparam buffer_size maximum buffer size.
  */
-template <typename T, std::size_t buffer_size>
+template<typename T, std::size_t buffer_size>
 class Buffer {
-    static_assert(buffer_size > 0, "Buffer buffer_size must be greater than zero");
+    static_assert(buffer_size > 0,
+                  "Buffer buffer_size must be greater than zero");
 private:
     /// Elements in the buffer.
     std::array<T, buffer_size> data;
@@ -40,14 +41,15 @@ private:
 
 public:
     Buffer() = default;
-    Buffer(const Buffer&) = delete;
+
+    Buffer(const Buffer &) = delete;
 
     /**
      * Access the buffer item.
      * @param index index in the buffer.
      * @return item at the index
      */
-    T& operator[](const std::size_t index) {
+    T &operator[](const std::size_t index) {
         if (index >= length) {
             throw std::out_of_range("index out of range");
         }
@@ -110,7 +112,7 @@ public:
             return index != other.index;
         }
 
-        const T& operator*() {
+        const T &operator*() {
             return (*buffer)[index];
         }
     };

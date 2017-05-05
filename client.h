@@ -6,6 +6,7 @@
 #include <cstring>
 
 #define _POSIX_C_SOURCE 1
+
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -13,16 +14,19 @@
 
 #include "error.h"
 #include "protocol.h"
+#include "communication.h"
 
 namespace sik {
 
     /**
      * Exception thrown when server error occurs.
      */
-    class ClientException: public Exception {
+    class ClientException : public Exception {
     public:
-        explicit ClientException(const std::string &message): Exception(message) {}
-        explicit ClientException(std::string &&message): Exception(message) {}
+        explicit ClientException(const std::string &message) : Exception(
+                message) {}
+
+        explicit ClientException(std::string &&message) : Exception(message) {}
     };
 
     class Client {
@@ -56,12 +60,13 @@ namespace sik {
             addr_hints.ai_socktype = SOCK_DGRAM;
             addr_hints.ai_protocol = IPPROTO_UDP;
 
-            if (getaddrinfo(host.c_str(), nullptr, &addr_hints, &addr_result) != 0) {
+            if (getaddrinfo(host.c_str(), nullptr, &addr_hints, &addr_result)
+                    != 0) {
                 throw ClientException("Error getting address");
             }
 
             address.sin_family = AF_INET;
-            sockaddr_in * sockaddr_result = (sockaddr_in *) addr_result->ai_addr;
+            sockaddr_in *sockaddr_result = (sockaddr_in *) addr_result->ai_addr;
             address.sin_addr.s_addr = sockaddr_result->sin_addr.s_addr;
             address.sin_port = htons(port);
 
@@ -83,15 +88,10 @@ namespace sik {
          * @param message message to send.
          */
         void send(const Message &message) {
-            std::string bytes = message.to_bytes();
-            const char * data = bytes.c_str();
-
-            socklen_t address_len = sizeof(address);
-            ssize_t sent_length = sendto(sock, data, (ssize_t)bytes.length(), 0,
-                                         (sockaddr *)&address, address_len);
-
-            if (sent_length != (ssize_t)bytes.length()) {
-                // TODO: handle error
+            try {
+                Sender(sock).send_message(address, message);
+            } catch (const ConnectionException&) {
+                // TODO: error handling
             }
         }
 
@@ -100,24 +100,16 @@ namespace sik {
          * data is not a valid message prints warning to stderr and.
          */
         void receive() {
-            ssize_t length = sizeof(buffer) - 1;
             sockaddr_in server_address;
-            socklen_t address_len = sizeof(server_address);
-
-            ssize_t received_length = recvfrom(sock, buffer, length, 0,
-                                               (sockaddr *)&server_address, &address_len);
-            if (received_length < 0) {
-                // TODO: handle error
-            }
-
             try {
-                Message message(buffer);
-                message.print(std::cout);
+                Receiver receiver(sock);
+                std::unique_ptr<Message> message
+                        = receiver.receive_message(server_address);
+                message->print(std::cout);
             } catch (const std::invalid_argument& e) {
-                std::cerr << "Invalid message received from "
-                          << inet_ntoa(server_address.sin_addr) << ":"
-                          << server_address.sin_port << " with error "
-                          << e.what() << std::endl;
+                print_message_error(address, e.what());
+            } catch (const ConnectionException&) {
+                // TODO: handle exception
             }
         }
 
@@ -125,7 +117,7 @@ namespace sik {
          * Starts data receiving loop.
          */
         void run() {
-            while(!stopping) {
+            while (!stopping) {
                 receive();
             }
         }

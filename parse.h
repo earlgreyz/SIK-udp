@@ -13,10 +13,12 @@ namespace sik {
     /**
      * Exception thrown when parsing error occurs.
      */
-    class ParseException: public Exception {
+    class ParseException : public Exception {
     public:
-        explicit ParseException(const std::string &message): Exception(message) {}
-        explicit ParseException(std::string &&message): Exception(message) {}
+        explicit ParseException(const std::string &message) : Exception(
+                message) {}
+        explicit ParseException(std::string &&message) : Exception(
+                std::move(message)) {}
     };
 
     /**
@@ -29,11 +31,13 @@ namespace sik {
         try {
             uint16_t port = boost::lexical_cast<uint16_t>(input);
             if (boost::lexical_cast<std::string>(port) != input || port == 0) {
-                throw ParseException("Port must be an integer between 1 and 65,535");
+                throw ParseException(
+                        "Port must be an integer between 1 and 65,535");
             }
             return port;
         } catch (const boost::bad_lexical_cast &) {
-            throw ParseException("Port must be an integer between 1 and 65,535");
+            throw ParseException(
+                    "Port must be an integer between 1 and 65,535");
         }
     }
 
@@ -61,7 +65,8 @@ namespace sik {
             timestamp_t timestamp = boost::lexical_cast<timestamp_t>(input);
             if (boost::lexical_cast<std::string>(timestamp) != input
                     || !is_proper_timestamp(timestamp)) {
-                throw ParseException("Timestamp must be a 64-bit unsigned number");
+                throw ParseException(
+                        "Timestamp must be a 64-bit unsigned number");
             }
             return timestamp;
         } catch (const boost::bad_lexical_cast &) {

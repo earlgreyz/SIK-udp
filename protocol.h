@@ -47,22 +47,25 @@ namespace sik {
          * @throws std::invalid_argument when message data is invalid.
          */
         inline void validate() const {
-             if (!is_proper_timestamp(timestamp)) {
-                 throw std::invalid_argument("Invalid timestamp");
-             }
+            if (!is_proper_timestamp(timestamp)) {
+                throw std::invalid_argument("Invalid timestamp");
+            }
         }
 
     public:
-        Message(const Message&) = delete;
-        Message(Message &&m): timestamp(m.timestamp), character(m.character),
-                              message(std::move(m.message)) {}
+        Message(const Message &) = delete;
+
+        Message(Message &&m) : timestamp(m.timestamp), character(m.character),
+                               message(std::move(m.message)) {}
+
         /**
          * Constructs new Message with given parameters.
          * @param timestamp message timestamp.
          * @param character message character.
          * @param message message content.
          */
-        Message(timestamp_t timestamp, char character, const std::string &message)
+        Message(timestamp_t timestamp, char character,
+                const std::string &message)
                 : timestamp(timestamp), character(character), message(message) {
             validate();
         }
@@ -74,7 +77,8 @@ namespace sik {
          * @param message message content.
          */
         Message(timestamp_t timestamp, char character, std::string &&message)
-                : timestamp(timestamp), character(character), message(std::move(message)) {
+                : timestamp(timestamp), character(character),
+                  message(std::move(message)) {
             validate();
         }
 
@@ -85,10 +89,13 @@ namespace sik {
          * - up to 65527 bytes as message (std::string)
          * @param bytes raw bytes with given format
          */
-        Message(const char *bytes) {
+        Message(const char *bytes, std::size_t length) {
+            if (length < sizeof(timestamp_t) + sizeof(char)) {
+                throw std::invalid_argument("Invalid message data");
+            }
             // Get first sizeof(timestamp_t) bytes and save it as timestamp
             // after converting from big endian to host number system
-            timestamp = be64toh(((timestamp_t *)bytes)[0]);
+            timestamp = be64toh(((timestamp_t *) bytes)[0]);
             // Save next byte as the message character
             character = bytes[sizeof(timestamp_t)];
             // Save remaining bytes as message content
@@ -107,7 +114,7 @@ namespace sik {
         std::string to_bytes() const noexcept {
             std::string bytes(sizeof(timestamp_t) + sizeof(char), 0);
             // Save timestamp in big endian form at the beginning of the data
-            ((timestamp_t *)bytes.c_str())[0] = htobe64(timestamp);
+            ((timestamp_t *) bytes.c_str())[0] = htobe64(timestamp);
             // Save character after the timestamp
             bytes[sizeof(timestamp_t)] = character;
             // Append remaining message content

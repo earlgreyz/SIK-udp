@@ -10,7 +10,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <map>
 
 #include "memory.h"
 #include "error.h"
@@ -19,6 +18,7 @@
 #include "protocol.h"
 #include "buffer.h"
 #include "connections.h"
+#include "communication.h"
 
 namespace sik {
     static const std::size_t BUFFER_SIZE = 4096u;
@@ -31,8 +31,8 @@ namespace sik {
     public:
         explicit ServerException(const std::string &message) : Exception(
                 message) {}
-
-        explicit ServerException(std::string &&message) : Exception(message) {}
+        explicit ServerException(std::string &&message) : Exception(
+                std::move(message)) {}
     };
 
     /**
@@ -50,20 +50,15 @@ namespace sik {
         /// Poll set.
         std::unique_ptr<Poll<MAX_CLIENTS>> poll;
 
-        /// Buffer for data received from clients.
-        char data_buffer[PACKET_SIZE];
-
         /// Data type in buffer: (arrival_time, message)
         using BufferData = std::pair<std::time_t, std::unique_ptr<Message>>;
         /// Buffer for queued Messages
         Buffer<BufferData, BUFFER_SIZE> buffer;
-
         /// First message received (front of messages stack), ready to send
         std::unique_ptr<Message> current_message;
 
         /// Client connections
         Connections connections;
-
         /// Clients to receive current message
         std::queue<sockaddr_in> current_clients;
 
@@ -72,8 +67,7 @@ namespace sik {
          * @throws ServerException when opening socket fails.
          */
         void open_socket() {
-            if ((sock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK,
-                               IPPROTO_UDP)) != -1) {
+            if ((sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) != -1) {
                 return;
             }
             throw ServerException("Error opening socket");
@@ -100,23 +94,20 @@ namespace sik {
          */
         void receive_data() noexcept {
             sockaddr_in client_address;
-            socklen_t address_len = sizeof(client_address);
-            ssize_t length = recvfrom(
-                    sock, data_buffer, sizeof(data_buffer), 0,
-                    (sockaddr *) &client_address, &address_len);
-
-            if (length < 0) {
+            try {
+                Receiver receiver(sock);
+                std::unique_ptr<Message> message =
+                        receiver.receive_message(client_address);
+                buffer.push(std::make_pair(
+                        std::time(0),
+                        std::move(message)
+                ));
+            } catch (const std::invalid_argument &e) {
+                print_message_error(client_address, e.what());
+            } catch (const ConnectionException&) {
                 // TODO: Error handling
             }
 
-            try {
-                // Add received message to the buffer
-                buffer.push(std::make_pair(
-                        std::time(0),
-                        make_unique<Message>(data_buffer)));
-            } catch (const std::invalid_argument &e) {
-                print_message_error(client_address, e.what());
-            }
             // Add client address to send him messages.
             connections.add_client(client_address);
         }
@@ -144,18 +135,12 @@ namespace sik {
             }
 
             sockaddr_in client_address = current_clients.front();
-            socklen_t address_len = sizeof(client_address);
             current_clients.pop();
 
-            std::string bytes = current_message->to_bytes();
-            const char *data = bytes.c_str();
-
-            ssize_t sent_length = sendto(
-                    sock, data, (ssize_t) bytes.length(), 0,
-                    (sockaddr *) &client_address, address_len);
-
-            if (sent_length != (ssize_t) bytes.length()) {
-                // TODO: handle error
+            try {
+                Sender(sock).send_message(client_address, *current_message);
+            } catch (const ConnectionException& e) {
+                // TODO: error handling
             }
         }
 
