@@ -89,7 +89,7 @@ namespace sik {
          * @param bytes raw bytes with given format
          */
         Message(const char *bytes, std::size_t length) {
-            if (length <= message_offset) {
+            if (length < message_offset) {
                 throw std::invalid_argument("Invalid message data");
             }
             // Get first sizeof(timestamp_t) bytes and save it as timestamp
