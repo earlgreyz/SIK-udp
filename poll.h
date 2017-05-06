@@ -129,7 +129,7 @@ namespace sik {
          * @param timeout milliseconds to wait for events before timeout
          * @throws PollTimeoutException when no event occurs during given
          * ammount of time
-         * @throws PollException when `poll` returns an error
+         * @throws std::runtime_error when `poll` returns an error
          */
         void wait(int timeout) {
             for (pollfd &client: clients) {
@@ -140,7 +140,7 @@ namespace sik {
             if (res == 0) {
                 throw PollTimeoutException();
             } else if (res < 0) {
-                throw PollException("Error while calling poll");
+                throw std::runtime_error("Error when calling poll");
             }
         }
 

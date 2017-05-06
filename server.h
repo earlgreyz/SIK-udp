@@ -130,7 +130,7 @@ namespace sik {
             }
 
             // Add client address to send him messages.
-            connections->add_client(client_address);
+            connections->add_client(client_address, std::time(0));
         }
 
         /**
@@ -203,14 +203,21 @@ namespace sik {
         void run() noexcept {
             stopping = false;
             while (!stopping) {
-                poll->wait(-1);
+                try {
+                    poll->wait(-1);
+                } catch (const std::exception&) {
+                    continue;
+                }
+
                 if (stopping) {
                     return;
                 }
 
                 if ((*poll)[sock].revents & POLLIN) {
                     receive();
-                } else if ((*poll)[sock].revents & POLLOUT) {
+                }
+
+                if ((*poll)[sock].revents & POLLOUT) {
                     send();
                 }
             }

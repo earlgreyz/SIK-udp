@@ -15,15 +15,27 @@ namespace sik {
         using Interval = typename std::pair<std::time_t, std::time_t>;
 
         struct Client {
+            /// Client socket address
             sockaddr_in address;
+            /// Intervals for which client should receive messages
             std::queue<Interval> connections;
 
-            Client(sockaddr_in address, timestamp_t timestamp)
+            /**
+             * Constructs new client.
+             * @param address client address.
+             * @param timestamp first interval timestamp.
+             */
+            Client(sockaddr_in address, std::time_t timestamp)
                     : address(std::move(address)) {
                 connections.push(
                         std::make_pair(timestamp, timestamp + TIMEOUT));
             }
 
+            /**
+             * Adds new connection or extends the last existing (if intervals
+             * would overlap).
+             * @param timestamp connected timestamp.
+             */
             void add_connection(std::time_t timestamp) noexcept {
                 if (connections.back().second >= timestamp) {
                     connections.back().second = timestamp + TIMEOUT;
@@ -34,27 +46,34 @@ namespace sik {
             }
         };
 
-        bool in_bounds(std::time_t timestamp,
+        /**
+         * Checks if given time point is between bounds of interval.
+         * @param timestamp time point.
+         * @param interval interval.
+         * @return whether point is between interval bounds.
+         */
+        inline bool in_bounds(std::time_t timestamp,
                        const Interval &interval) const noexcept {
             return timestamp >= interval.first && timestamp <= interval.second;
         }
 
+        /// Connected clients.
         std::deque<Client> clients;
     public:
         /**
-         * Adds client with current timestamp and timeout.
-         * @param address
+         * Adds client or extends the timeout on existing one.
+         * @param address client address
+         * @param connection_time time when client connected.
          */
-        void add_client(sockaddr_in address) {
-            std::time_t now = std::time(0);
+        void add_client(sockaddr_in address, std::time_t connection_time) {
             for (auto &client: clients) {
                 if (client.address.sin_addr.s_addr == address.sin_addr.s_addr
-                    && client.address.sin_port == address.sin_port) {
-                    client.add_connection(now);
+                        && client.address.sin_port == address.sin_port) {
+                    client.add_connection(connection_time);
                     return;
                 }
             }
-            clients.push_back(Client(address, now));
+            clients.push_back(Client(address, connection_time));
         }
 
         /**
