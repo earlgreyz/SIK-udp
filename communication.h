@@ -92,7 +92,7 @@ namespace sik {
             if (length < 0) {
                 throw ConnectionException();
             }
-            buffer[length + 1] = '\0';
+            buffer[length] = '\0';
 
             return std::make_unique<Message>(buffer, (std::size_t) length);
         }

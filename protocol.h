@@ -124,6 +124,13 @@ namespace sik {
         }
 
         /**
+         * @return whether message content is not empty.
+         */
+        inline bool has_message() const noexcept {
+            return message.length() > 0;
+        }
+
+        /**
          * Sets message to given string.
          * @param msg new message.
          * @throws std::invalid_argument if message is too long.

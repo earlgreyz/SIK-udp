@@ -118,6 +118,10 @@ namespace sik {
             try {
                 std::unique_ptr<Message> message =
                         receiver->receive_message(client_address);
+                if (message->has_message()) {
+                    throw std::invalid_argument(
+                            "Only timestamp and a single character expected");
+                }
                 buffer->push(std::make_pair(std::time(0), std::move(message)));
             } catch (const std::invalid_argument &e) {
                 print_error(client_address, e.what());
