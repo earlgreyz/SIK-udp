@@ -10,8 +10,6 @@
 namespace sik {
     using timestamp_t = uint64_t;
 
-    /// Minimum valid timestamp: Friday, 01-Jan-17 00:00:00 UTC in RFC 2822
-    // const int64_t MIN_TIMESTAMP = -7983878400;
     /// Maximum valid timestamp: Friday, 31-Dec-41 23:59:59 UTC in RFC 2822
     const timestamp_t MAX_TIMESTAMP = 71697398399u;
     /// Maximum IP Packet size - 64KB.
@@ -91,7 +89,7 @@ namespace sik {
          * @param bytes raw bytes with given format
          */
         Message(const char *bytes, std::size_t length) {
-            if (length < message_offset) {
+            if (length <= message_offset) {
                 throw std::invalid_argument("Invalid message data");
             }
             // Get first sizeof(timestamp_t) bytes and save it as timestamp
@@ -133,25 +131,38 @@ namespace sik {
         /**
          * Sets message to given string.
          * @param msg new message.
-         * @throws std::invalid_argument if message is too long.
          */
         void set_message(const std::string &msg) {
-            if (msg.length() > PACKET_SIZE - message_offset) {
-                throw std::invalid_argument("Message to long");
-            }
             message = msg;
         }
 
         /**
          * Sets message to given string.
          * @param msg new message.
-         * @throws std::invalid_argument if message is too long.
          */
         void set_message(std::string &&msg) {
-            if (msg.length() > PACKET_SIZE - message_offset) {
-                throw std::invalid_argument("Message to long");
-            }
             message = std::move(msg);
+        }
+
+        /**
+         * @return message timestamp.
+         */
+        timestamp_t get_timestamp() const noexcept {
+            return timestamp;
+        }
+
+        /**
+         * @return message character.
+         */
+        char get_character() const noexcept {
+            return character;
+        }
+
+        /**
+         * @return message content.
+         */
+        const std::string& get_message() const noexcept {
+            return message;
         }
 
         friend std::ostream &operator<<(std::ostream &, const Message &);
