@@ -62,21 +62,8 @@ void parse_arguments(const int argc, char * const argv[]) {
     }
 }
 
-/**
- * Registers SIGINT signal.
- */
-void register_signals() {
-    if (signal(SIGINT, [](int sig) {
-        client->stop();
-        std::cerr << "Signal " << sig << " Stopping client." << std::endl;
-    }) == SIG_ERR) {
-        fatal("Unable to register SIGINT signal", Status::ERROR_ARGS);
-    }
-}
-
 int main(int argc, char * argv[]) {
     parse_arguments(argc, argv);
-    register_signals();
 
     try {
         client = std::make_unique<sik::Client>(host, port);
