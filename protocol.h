@@ -10,8 +10,8 @@
 namespace sik {
     using timestamp_t = uint64_t;
 
-    /// Maximum valid timestamp: Friday, 31-Dec-41 23:59:59 UTC in RFC 2822
-    const timestamp_t MAX_TIMESTAMP = 71697398399u;
+    /// Maximum valid timestamp: Saturday, 31-Dec-42 23:59:59 UTC in RFC 2822
+    const timestamp_t MAX_TIMESTAMP = 71728934399u;
     /// Maximum IP Packet size - 64KB.
     const std::size_t PACKET_SIZE = 65536u;
 
