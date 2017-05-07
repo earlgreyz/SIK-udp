@@ -97,7 +97,8 @@ namespace sik {
             try {
                 sender->send_message(address, message);
             } catch (const std::exception&) {
-                // TODO: error handling
+                std::cerr << "Unexpected error occurred while sending message"
+                          << std::endl;
             }
         }
 
@@ -114,7 +115,8 @@ namespace sik {
             } catch (const std::invalid_argument& e) {
                 print_error(address, e.what());
             } catch (const ConnectionException&) {
-                // TODO: handle exception
+                std::cerr << "Unexpected error occurred while receiving message"
+                          << std::endl;
             }
         }
 

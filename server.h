@@ -114,7 +114,7 @@ namespace sik {
          * Handles receiving data from client.
          */
         void receive() noexcept {
-            sockaddr_in client_address;
+            sockaddr_in client_address = sockaddr_in();
             try {
                 std::unique_ptr<Message> message =
                         receiver->receive_message(client_address);
@@ -133,7 +133,8 @@ namespace sik {
             } catch (const std::invalid_argument &e) {
                 print_error(client_address, e.what());
             } catch (const ConnectionException &) {
-                // TODO: Error handling
+                std::cerr << "Unexpected error occurred while receiving message"
+                          << std::endl;
             }
 
             // Add client address to send him messages.
@@ -171,7 +172,8 @@ namespace sik {
             } catch (const WouldBlockException &) {
                 current_clients.push(client_address);
             } catch (const ConnectionException &) {
-                // TODO: error handling
+                std::cerr << "Unexpected error occurred while sending message"
+                          << std::endl;
             }
         }
 
