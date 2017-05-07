@@ -10,6 +10,11 @@
 namespace sik {
     static const std::time_t TIMEOUT = 2 * 60;
 
+    bool operator==(const sockaddr_in &a, const sockaddr_in &b) {
+        return std::tie(a.sin_addr.s_addr, a.sin_port)
+               == std::tie(b.sin_addr.s_addr, b.sin_port);
+    }
+
     class Connections {
     private:
         using Interval = typename std::pair<std::time_t, std::time_t>;
@@ -67,8 +72,7 @@ namespace sik {
          */
         void add_client(sockaddr_in address, std::time_t connection_time) {
             for (auto &client: clients) {
-                if (client.address.sin_addr.s_addr == address.sin_addr.s_addr
-                        && client.address.sin_port == address.sin_port) {
+                if (client.address == address) {
                     client.add_connection(connection_time);
                     return;
                 }
@@ -79,13 +83,20 @@ namespace sik {
         /**
          * Searches for clients with intervals containing timestamp.
          * Performs cleanup removing all intervals with end < timestamp.
+         * @param timestamp current timestamp
+         * @param exclude client to exclude from connections.
          * @return list of clients to send message to
          */
-        std::queue<sockaddr_in> get_clients(std::time_t timestamp) {
+        std::queue<sockaddr_in> get_clients(std::time_t timestamp,
+                                            sockaddr_in *exclude = nullptr) {
             std::queue<sockaddr_in> the_clients;
             auto it = clients.begin();
             while (it != clients.end()) {
                 auto &client = *it;
+                if (exclude != nullptr && client.address == *exclude) {
+                    it++;
+                    continue;
+                }
                 while (client.connections.size() > 0
                        && client.connections.front().second < timestamp) {
                     client.connections.pop();

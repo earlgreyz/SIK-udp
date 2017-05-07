@@ -110,3 +110,18 @@ TEST_CASE("Connections get_client removes old connections", "[Connections]") {
     CHECK(connections.get_clients(now).size() == 0);
     REQUIRE(connections.get_clients(now + 5 * 60u).size() == 1);
 }
+
+TEST_CASE("Connections get_clients excludes given address", "[Connections]") {
+    sik::Connections connections;
+    std::time_t now = time(0);
+
+    sockaddr_in client_a;
+    client_a.sin_family = AF_INET;
+    client_a.sin_addr.s_addr = inet_addr("192.168.0.10");
+    client_a.sin_port = htons(10012u);
+
+    connections.add_client(client_a, now);
+
+    CHECK(connections.get_clients(now).size() == 1);
+    REQUIRE(connections.get_clients(now, &client_a).size() == 0);
+}

@@ -38,8 +38,9 @@ namespace sik {
      */
     template<std::size_t buffer_size>
     class Server {
-        /// Data type in buffer: (arrival_time, message)
-        using BufferData = std::pair<std::time_t, std::unique_ptr<Message>>;
+        /// Data type in buffer: (arrival_time, message, sender)
+        using BufferData = std::tuple<std::time_t, std::unique_ptr<Message>,
+                sockaddr_in>;
     private:
         /// Indicates whether server should terminate.
         bool stopping = false;
@@ -101,8 +102,7 @@ namespace sik {
         void read_file(const std::string &filename) {
             try {
                 File file(filename);
-                file_content = file.read_content(
-                        PACKET_SIZE - Message::message_offset);
+                file_content = file.read_content();
             } catch (const std::invalid_argument &e) {
                 throw ServerException(e.what());
             } catch (const std::runtime_error &e) {
@@ -114,7 +114,7 @@ namespace sik {
          * Handles receiving data from client.
          */
         void receive() noexcept {
-            sockaddr_in client_address = sockaddr_in();
+            sockaddr_in client_address;
             try {
                 std::unique_ptr<Message> message =
                         receiver->receive_message(client_address);
@@ -122,7 +122,14 @@ namespace sik {
                     throw std::invalid_argument(
                             "Only timestamp and a single character expected");
                 }
-                buffer->push(std::make_pair(std::time(0), std::move(message)));
+                sockaddr_in client_copy = client_address;
+                buffer->push(
+                        std::make_tuple<std::time_t, std::unique_ptr<Message>,
+                                sockaddr_in>(
+                                std::time(0),
+                                std::move(message),
+                                std::move(client_copy)
+                        ));
             } catch (const std::invalid_argument &e) {
                 print_error(client_address, e.what());
             } catch (const ConnectionException &) {
@@ -139,8 +146,9 @@ namespace sik {
         void prepare_send_data() {
             while (current_clients.size() == 0 && buffer->size() > 0) {
                 BufferData current_item = buffer->pop();
-                current_clients = connections->get_clients(current_item.first);
-                current_message = std::move(current_item.second);
+                current_clients = connections->get_clients(
+                        std::get<0>(current_item), &std::get<2>(current_item));
+                current_message = std::move(std::get<1>(current_item));
                 current_message->set_message(file_content);
             }
         }
@@ -159,7 +167,7 @@ namespace sik {
             current_clients.pop();
 
             try {
-                sender->send_message(client_address, current_message);
+                sender->send_message(client_address, current_message, true);
             } catch (const WouldBlockException &) {
                 current_clients.push(client_address);
             } catch (const ConnectionException &) {
@@ -205,7 +213,7 @@ namespace sik {
             while (!stopping) {
                 try {
                     poll->wait(-1);
-                } catch (const std::exception&) {
+                } catch (const std::exception &) {
                     continue;
                 }
 

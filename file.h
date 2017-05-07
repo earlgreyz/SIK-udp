@@ -26,22 +26,22 @@ public:
 
     /**
      * Reads file content.
-     * @param buffer_size number of bytes to read.
      * @return file content.
      * @throws std::runtime_error if reading file returns an error
      */
-    std::string read_content(std::size_t buffer_size) const {
-        char buffer[buffer_size];
-        ssize_t length = read(file, buffer, buffer_size);
-        if (length < 0) {
-            throw std::runtime_error("Error reading file");
-        } else if ((std::size_t) length == buffer_size) {
-            std::cerr << "File too long, reading " << length << " bytes."
-                      << std::endl;
-            length--;
-        }
-        buffer[length] = '\0';
-        std::string content = buffer;
+    std::string read_content() const {
+        char buffer[64 * 1024u];
+        std::string content;
+
+        ssize_t length;
+        do {
+            length = read(file, buffer, sizeof(buffer) - 1);
+            if (length < 0) {
+                throw std::runtime_error("Error reading file");
+            }
+            buffer[length] = '\0';
+            content.append(buffer);
+        } while (length > 0);
         return std::move(content);
     }
 

@@ -35,18 +35,28 @@ namespace sik {
          * Sends message to given address.
          * @param address receiver address.
          * @param message message to send.
-         * @throws WouldBlockException if sento finishes with errno EWOULDBLOCK
+         * @param with_message send message with content.
+         * @throws WouldBlockException if sendto finishes with errno EWOULDBLOCK
          * @throws ConnectionException when sendto finishes with error
          */
         void send_message(const sockaddr_in &address,
-                          const std::unique_ptr<Message> &message) const {
+                          const std::unique_ptr<Message> &message,
+                          bool with_message = false) const {
             socklen_t address_len = sizeof(address);
 
             std::string bytes = message->to_bytes();
-            const char *data = bytes.c_str();
+            char data[bytes.length() + 1];
+            ssize_t data_length = bytes.length();
+
+            // We have to null terminate the string before sending.
+            std::memcpy(data, bytes.c_str(), bytes.length());
+            if (with_message) {
+                data[data_length] = '\0';
+                data_length++;
+            }
 
             ssize_t length;
-            length = sendto(sock, data, (ssize_t) bytes.length(), 0,
+            length = sendto(sock, data, data_length, 0,
                             (sockaddr *) &address, address_len);
 
             if (length < 0 && errno == EWOULDBLOCK) {
