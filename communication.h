@@ -55,15 +55,14 @@ namespace sik {
                 data_length++;
             }
 
-            ssize_t length;
-            length = sendto(sock, data, data_length, 0,
+            ssize_t length = sendto(sock, data, data_length, 0,
                             (sockaddr *) &address, address_len);
 
             if (length < 0 && errno == EWOULDBLOCK) {
                 throw WouldBlockException();
             }
 
-            if (length != (ssize_t) bytes.length()) {
+            if (length != data_length) {
                 throw ConnectionException();
             }
         }

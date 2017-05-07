@@ -172,8 +172,9 @@ namespace sik {
             } catch (const WouldBlockException &) {
                 current_clients.push(client_address);
             } catch (const ConnectionException &) {
-                std::cerr << "Unexpected error occurred while sending message"
-                          << std::endl;
+                std::cerr << "Error occurred while sending message to "
+                          << inet_ntoa(address.sin_addr) << ":"
+                          << address.sin_port << std::endl;
             }
         }
 

@@ -97,7 +97,7 @@ namespace sik {
             try {
                 sender->send_message(address, message);
             } catch (const std::exception&) {
-                std::cerr << "Unexpected error occurred while sending message"
+                std::cerr << "Error occurred while sending message to server"
                           << std::endl;
             }
         }
