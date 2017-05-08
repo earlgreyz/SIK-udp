@@ -104,8 +104,13 @@ namespace sik {
                 throw ConnectionException();
             }
 
-            if (with_message && buffer[length - 1] != '\0') {
-                throw std::invalid_argument("Message must be null terminated");
+            if (with_message ) {
+                if ((std::size_t) length <= Message::message_offset) {
+                    throw std::invalid_argument("Message must contain text");
+                } else if (buffer[length - 1] != '\0') {
+                    throw std::invalid_argument(
+                            "Message text must be null terminated");
+                }
             }
             buffer[length] = '\0';
 
