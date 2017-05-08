@@ -87,12 +87,14 @@ namespace sik {
         /**
          * Receives message from socket.
          * @param address sender address.
+         * @param with_message whether message should contain message.
          * @return received message
          * @throws std::invalid_parameter if received message is not a valid
          * message
          * @throws ConnectionException if recvfrom finishes with error
          */
-        std::unique_ptr<Message> receive_message(const sockaddr_in &address) {
+        std::unique_ptr<Message> receive_message(const sockaddr_in &address,
+                                                 bool with_message = false) {
             socklen_t address_len = sizeof(address);
 
             ssize_t length;
@@ -100,6 +102,10 @@ namespace sik {
                               (sockaddr *) &address, &address_len);
             if (length < 0) {
                 throw ConnectionException();
+            }
+
+            if (with_message && buffer[length - 1] != '\0') {
+                throw std::invalid_argument("Message must be null terminated");
             }
             buffer[length] = '\0';
 

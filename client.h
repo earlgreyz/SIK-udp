@@ -110,7 +110,7 @@ namespace sik {
             sockaddr_in server_address = sockaddr_in();
             try {
                 std::unique_ptr<Message> message
-                        = receiver->receive_message(server_address);
+                        = receiver->receive_message(server_address, true);
                 std::cout << *message << std::endl;
             } catch (const std::invalid_argument& e) {
                 print_error(address, e.what());
