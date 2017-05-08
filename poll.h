@@ -73,7 +73,7 @@ namespace sik {
          * @return pollfd corresponding to the given fd
          * @throws std::invalid_argument when fd is not a valid file descriptor.
          */
-        const pollfd &operator[](int fd) const {
+        pollfd &operator[](int fd) {
             if (fd < 0) {
                 throw std::invalid_argument("fd must be a positive integer");
             }

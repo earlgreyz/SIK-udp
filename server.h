@@ -130,6 +130,7 @@ namespace sik {
                                 std::move(message),
                                 std::move(client_copy)
                         ));
+                (*poll)[sock].events = POLLIN | POLLOUT;
             } catch (const std::invalid_argument &e) {
                 print_error(client_address, e.what());
             } catch (const ConnectionException &) {
@@ -161,6 +162,7 @@ namespace sik {
         void send() noexcept {
             prepare_send_data();
             if (current_clients.size() == 0) {
+                (*poll)[sock].events = POLLIN;
                 return;
             }
 
